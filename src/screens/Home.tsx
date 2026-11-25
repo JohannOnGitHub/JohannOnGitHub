@@ -30,7 +30,9 @@ export function Home({ onPlay, onParent }: { onPlay: () => void; onParent: () =>
           de Pépette
         </h1>
         <div className="home-guide">
-          <Pepette size={scr.portrait ? fit(scr, 0.22, 90, 170) : 130} />
+          <button onClick={() => void speak('Coucou ! Qui vient jouer aujourd’hui ?', { pitch: 1.45, rate: 0.95 })} aria-label="Pépette">
+            <Pepette size={scr.portrait ? fit(scr, 0.22, 90, 170) : 130} />
+          </button>
           <Bubble text="Coucou ! Qui vient jouer aujourd’hui ?" />
         </div>
         <div className="kid-cards">

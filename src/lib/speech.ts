@@ -228,3 +228,22 @@ export function thresholdForAge(age: number) {
   if (age <= 6) return 0.7
   return 0.8
 }
+
+/**
+ * iPhone/iPad Safari only lets a page speak after a user gesture.
+ * On the first touch we speak a silent utterance to "unlock" the voice.
+ */
+export function unlockSpeechOnFirstTouch() {
+  if (!canSpeak) return
+  const unlock = () => {
+    pickVoice()
+    const u = new SpeechSynthesisUtterance(' ')
+    u.volume = 0
+    u.lang = 'fr-FR'
+    speechSynthesis.speak(u)
+    window.removeEventListener('pointerdown', unlock, true)
+    window.removeEventListener('touchend', unlock, true)
+  }
+  window.addEventListener('pointerdown', unlock, true)
+  window.addEventListener('touchend', unlock, true)
+}
