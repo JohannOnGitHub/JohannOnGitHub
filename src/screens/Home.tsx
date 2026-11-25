@@ -144,7 +144,7 @@ function Setup({ onDone, onCancel, first }: { onDone: () => void; onCancel: () =
             className="btn primary"
             disabled={!name.trim()}
             onClick={() => {
-              if (first) setFamily({ parent, mamie: mamie.trim() || 'Mamie', papi: papi.trim() || 'Papi' })
+              if (first) setFamily({ parent, mamie: mamie.trim() || 'Chacha', papi: papi.trim() || 'Papy' })
               addKid(name.trim(), age, buddy)
               selectKid(null)
               sfx.win()

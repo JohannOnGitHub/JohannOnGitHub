@@ -384,7 +384,7 @@ export const PLACES: Place[] = [
       {
         id: 'bre-rennes',
         kind: 'repeat',
-        fact: 'Rennes est la capitale de la Bretagne. Il y a de vieilles maisons en bois de toutes les couleurs !',
+        fact: 'Rennes est la capitale de la Bretagne. C’est là que {papi} a grandi ! Il y a de vieilles maisons en bois de toutes les couleurs.',
         ask: 'Répète : « Rennes, c’est la ville de {papi} ! »',
         answers: ['ville de {papi}', 'rennes'],
         cheer: 'Bravo ! {papi} va faire un grand sourire !',

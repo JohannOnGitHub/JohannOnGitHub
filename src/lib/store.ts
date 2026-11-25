@@ -28,7 +28,7 @@ const KEY = 'marmotte:v1'
 
 const defaultState: State = {
   kids: [],
-  family: { parent: 'Papa', mamie: 'Mamie', papi: 'Papi', unlockAll: false },
+  family: { parent: 'Papa', mamie: 'Chacha', papi: 'Papy', unlockAll: false },
   currentKid: null,
 }
 
