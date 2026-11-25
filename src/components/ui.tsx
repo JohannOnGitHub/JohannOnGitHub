@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { sfx } from '../lib/sfx'
+import { music, useMusicOn } from '../lib/music'
+
+export function MusicButton({ className }: { className?: string }) {
+  const on = useMusicOn()
+  return (
+    <button className={`round-btn ${className ?? ''}`} onClick={() => music.toggle()} aria-label={on ? 'Couper la musique' : 'Mettre la musique'}>
+      {on ? '🎵' : '🔇'}
+    </button>
+  )
+}
 
 export function Bubble({ who, text, side = 'left' }: { who?: string; text: string; side?: 'left' | 'right' }) {
   return (
@@ -50,6 +60,7 @@ export function TopBar({ onBack, stars, title, right }: { onBack?: () => void; s
       {title && <div className="topbar-title">{title}</div>}
       <div className="topbar-right">
         {right}
+        <MusicButton />
         {stars !== undefined && <div className="stars-pill">⭐ {stars}</div>}
       </div>
     </div>

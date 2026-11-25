@@ -4,6 +4,8 @@ import { selectKid, useStore } from './lib/store'
 import { initSync } from './lib/sync'
 import { stopListening, stopSpeaking } from './lib/speech'
 import { sfx } from './lib/sfx'
+import { music, type TuneId } from './lib/music'
+import { Splash } from './screens/Splash'
 import { Home } from './screens/Home'
 import { MapScreen } from './screens/MapScreen'
 import { PlaceScreen } from './screens/PlaceScreen'
@@ -27,6 +29,21 @@ export default function App() {
   const kid = kids.find((k) => k.id === currentKid) ?? null
   const [route, setRoute] = useState<Route>({ name: 'home' })
   const [toasts, setToasts] = useState<string[]>([])
+  const [started, setStarted] = useState(false)
+
+  // A different nursery tune for each part of the world.
+  useEffect(() => {
+    const byPlace: Record<PlaceId, TuneId> = { alpe: 'jacques', stvincent: 'jacques', provence: 'lune', marseille: 'lune', bretagne: 'lune' }
+    const t: TuneId =
+      route.name === 'place' || route.name === 'game'
+        ? byPlace[route.place]
+        : route.name === 'bonusgame'
+          ? route.game === 'virages'
+            ? 'jacques'
+            : 'lune'
+          : 'maman'
+    music.play(t)
+  }, [route])
 
   useEffect(() => {
     void initSync()
@@ -43,6 +60,17 @@ export default function App() {
     setToasts((t) => [...t, ...ids])
     setTimeout(() => setToasts((t) => t.slice(ids.length)), 4500)
   }
+
+  if (!started)
+    return (
+      <Splash
+        onStart={() => {
+          music.unlock()
+          sfx.win()
+          setStarted(true)
+        }}
+      />
+    )
 
   const needsKid = route.name !== 'home' && route.name !== 'parent'
   if (needsKid && !kid) {

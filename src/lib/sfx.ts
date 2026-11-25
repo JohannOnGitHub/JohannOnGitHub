@@ -1,6 +1,6 @@
 // Tiny synthesized sound effects (no audio files needed).
 let ctx: AudioContext | null = null
-function ac() {
+export function ac() {
   if (!ctx) {
     const C = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     if (!C) return null

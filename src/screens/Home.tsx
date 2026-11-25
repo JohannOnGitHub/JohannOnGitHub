@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { BUDDIES, type BuddyId } from '../data/content'
 import { Buddy, Pepette } from '../components/Characters'
 import { Scene } from '../components/Scenes'
-import { Bubble, HoldButton } from '../components/ui'
+import { Bubble, HoldButton, MusicButton } from '../components/ui'
 import { addKid, selectKid, setFamily, useStore } from '../lib/store'
 import { speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
@@ -57,6 +57,7 @@ export function Home({ onPlay, onParent }: { onPlay: () => void; onParent: () =>
           </button>
         </div>
       </div>
+      <MusicButton className="music-corner" />
       <HoldButton className="parent-gear" onDone={onParent}>
         ⚙️ <small>Parents (rester appuyé)</small>
       </HoldButton>

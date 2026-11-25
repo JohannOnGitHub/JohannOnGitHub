@@ -1,3 +1,5 @@
+import { music } from './music'
+
 // Voice engine: French text-to-speech + speech recognition with
 // age-aware, forgiving matching (a 3-year-old's "mamotte" is a marmotte!).
 
@@ -53,9 +55,11 @@ export function speak(text: string, style: VoiceStyle = { pitch: 1.1, rate: 0.9 
     u.pitch = style.pitch
     u.rate = style.rate
     let done = false
+    music.duck(0.35)
     const finish = () => {
       if (!done) {
         done = true
+        music.duck(1)
         resolve()
       }
     }
@@ -89,9 +93,11 @@ export function listen(timeoutMs = 7000): Promise<string[]> {
     rec.maxAlternatives = 5
     const heard: string[] = []
     let settled = false
+    music.duck(0)
     const settle = () => {
       if (settled) return
       settled = true
+      music.duck(1)
       clearTimeout(timer)
       if (current === rec) current = null
       resolve(heard)
