@@ -24,13 +24,4 @@ for l in json.load(open(lines)):
     print("✓", l["text"][:70])
 PY
 # Rebuild the manifest from the files present.
-python3 - <<'PY'
-import os, json
-m = {}
-for role in sorted(os.listdir("public/voices")):
-    d = f"public/voices/{role}"
-    if os.path.isdir(d):
-        m[role] = {f[:-4]: 1 for f in sorted(os.listdir(d)) if f.endswith(".mp3")}
-json.dump(m, open("public/voices/manifest.json", "w"), separators=(",", ":"))
-print({r: len(v) for r, v in m.items()})
-PY
+python3 scripts/voice-manifest.py
