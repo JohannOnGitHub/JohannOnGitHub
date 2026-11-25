@@ -6,6 +6,7 @@ import { Bubble, Confetti, TopBar } from '../components/ui'
 import { addStars, badgesOf, updateKid, type Kid } from '../lib/store'
 import { canListen, listen, speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { fit, useScreen } from '../lib/useScreen'
 
 export function BonusMenu({ kid, onBack, onPlay }: { kid: Kid; onBack: () => void; onPlay: (g: BonusGame['id']) => void }) {
   return (
@@ -106,6 +107,7 @@ export function Atelier({ kid, onBack }: { kid: Kid; onBack: () => void }) {
   const badges = badgesOf(kid)
   const buddy = BUDDIES[kid.buddy]
   const [line, setLine] = useState('Choisis un trésor et je le mets !')
+  const scr = useScreen()
   useEffect(() => {
     void speak('Bienvenue dans l’atelier ! Choisis un trésor et je le mets !', buddy.voice)
   }, [buddy.voice])
@@ -116,7 +118,7 @@ export function Atelier({ kid, onBack }: { kid: Kid; onBack: () => void }) {
       <TopBar onBack={onBack} stars={kid.stars} title="🎨 L’atelier" />
       <div className="atelier">
         <div className="atelier-stage">
-          <Buddy id={kid.buddy} size={260} outfit={kid.outfit} />
+          <Buddy id={kid.buddy} size={scr.portrait ? fit(scr, 0.45, 160, 320) : 260} outfit={kid.outfit} />
           <Bubble who={buddy.name} text={line} />
         </div>
         <div className="wardrobe">
@@ -162,7 +164,7 @@ export function Atelier({ kid, onBack }: { kid: Kid; onBack: () => void }) {
 // ---------- Les 21 virages: shout to drive the monster truck up Alpe d'Huez ----------
 
 const BENDS = 21
-const roadX = (i: number) => (i % 2 === 0 ? 32 : 68)
+const roadX = (i: number) => (i % 2 === 0 ? 25 : 75)
 const ROAD = Array.from({ length: BENDS + 1 }, (_, i) => `${roadX(i)},${92 - (i / BENDS) * 80}`).join(' ')
 
 export function Virages({ kid, onBack }: { kid: Kid; onBack: () => void }) {
@@ -217,6 +219,7 @@ export function Virages({ kid, onBack }: { kid: Kid; onBack: () => void }) {
       <Scene place="alpe" />
       <TopBar onBack={onBack} stars={kid.stars} title={`🛻 Virage ${Math.min(bend, BENDS)} / ${BENDS}`} />
       <div className="virages">
+        <div className="road-area">
         <svg className="road" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
           <polyline
             points={ROAD}
@@ -237,6 +240,7 @@ export function Virages({ kid, onBack }: { kid: Kid; onBack: () => void }) {
         <div className="finish" style={{ left: '50%', top: '6%' }}>🏁</div>
         <div className="truck-pos" style={{ left: `${x}%`, top: `${y}%` }}>
           <MonsterTruck size={110} color={kid.buddy === 'givrine' ? '#c77dff' : '#e63946'} />
+        </div>
         </div>
         {won && <Confetti />}
         <div className="virages-controls">

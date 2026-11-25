@@ -6,6 +6,7 @@ import { Bubble, TopBar } from '../components/ui'
 import { markVisited, personalize, placeProgress, useStore, type Kid } from '../lib/store'
 import { speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { fit, useScreen } from '../lib/useScreen'
 
 export function PlaceScreen({
   kid,
@@ -26,6 +27,7 @@ export function PlaceScreen({
   const welcome = personalize(place.welcome, family)
   const [talking, setTalking] = useState(true)
   const prog = placeProgress(kid, placeId)
+  const scr = useScreen()
 
   useEffect(() => {
     const newly = markVisited(kid.id, placeId)
@@ -42,11 +44,11 @@ export function PlaceScreen({
       <div className="place-stage">
         <div className="place-cast">
           <div className="cast-friend">
-            <Friend id={place.friend} size={230} talking={talking} />
+            <Friend id={place.friend} size={scr.portrait ? fit(scr, 0.42, 130, 320) : 230} talking={talking} />
           </div>
           <Bubble who={`${friend.name} ${friend.what}`} text={welcome} />
           <div className="cast-buddy">
-            <Buddy id={kid.buddy} size={170} outfit={kid.outfit} />
+            <Buddy id={kid.buddy} size={scr.portrait ? fit(scr, 0.32, 100, 240) : 170} outfit={kid.outfit} />
           </div>
         </div>
         <div className="activity-grid">

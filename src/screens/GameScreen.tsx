@@ -6,6 +6,7 @@ import { Bubble, Confetti, HoldButton, TopBar } from '../components/ui'
 import { personalize, placeProgress, recordSuccess, useStore, type Kid } from '../lib/store'
 import { canListen, listen, scoreAnswer, speak, stopListening, stopSpeaking, thresholdForAge } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { fit, useScreen } from '../lib/useScreen'
 
 type Phase = 'telling' | 'ready' | 'listening' | 'success' | 'miss'
 const NUM_WORDS = ['un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix']
@@ -32,6 +33,9 @@ export function GameScreen({
   const buddy = BUDDIES[kid.buddy]
   const P = (s: string) => personalize(s, family)
   const little = kid.age <= 3
+  const scr = useScreen()
+  const friendSize = scr.portrait ? fit(scr, 0.34, 110, 270) : 150
+  const buddySize = scr.portrait ? fit(scr, 0.27, 90, 210) : 120
 
   const [phase, setPhase] = useState<Phase>('telling')
   const [line, setLine] = useState(P(a.fact))
@@ -127,9 +131,9 @@ export function GameScreen({
       <TopBar onBack={onBack} stars={kid.stars} title={place.name} />
       <div className="game">
         <div className="game-cast">
-          <Friend id={place.friend} size={150} talking={speaker === 'friend' && phase !== 'listening'} />
+          <Friend id={place.friend} size={friendSize} talking={speaker === 'friend' && phase !== 'listening'} />
           <Bubble who={speaker === 'friend' ? friend.name : buddy.name} text={line} />
-          <Buddy id={kid.buddy} size={120} outfit={kid.outfit} talking={speaker === 'buddy'} />
+          <Buddy id={kid.buddy} size={buddySize} outfit={kid.outfit} talking={speaker === 'buddy'} />
         </div>
 
         <div className={`game-card ${phase === 'success' ? 'won' : ''}`}>

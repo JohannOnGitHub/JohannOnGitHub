@@ -6,6 +6,7 @@ import { Bubble, TopBar } from '../components/ui'
 import { isPlaceOpen, placeProgress, useStore, type Kid } from '../lib/store'
 import { speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { fit, useScreen } from '../lib/useScreen'
 
 export function MapScreen({
   kid,
@@ -22,6 +23,7 @@ export function MapScreen({
 }) {
   const { family } = useStore()
   const buddy = BUDDIES[kid.buddy]
+  const scr = useScreen()
   const line = `Coucou ${kid.name} ! Où est-ce qu’on va aujourd’hui ?`
   useEffect(() => {
     void speak(line, buddy.voice)
@@ -66,7 +68,7 @@ export function MapScreen({
           })}
         </div>
         <div className="map-side">
-          <Buddy id={kid.buddy} size={150} outfit={kid.outfit} />
+          <Buddy id={kid.buddy} size={scr.portrait ? fit(scr, 0.24, 80, 170) : 150} outfit={kid.outfit} />
           <Bubble who={buddy.name} text={line} />
           <button className="big-btn album" onClick={() => (sfx.tap(), onAlbum())}>
             📒 Mon album

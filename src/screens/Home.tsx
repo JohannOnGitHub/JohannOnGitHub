@@ -6,10 +6,13 @@ import { Bubble, HoldButton } from '../components/ui'
 import { addKid, selectKid, setFamily, useStore } from '../lib/store'
 import { speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { fit, useScreen } from '../lib/useScreen'
 
 export function Home({ onPlay, onParent }: { onPlay: () => void; onParent: () => void }) {
   const { kids } = useStore()
   const [adding, setAdding] = useState(kids.length === 0)
+  const scr = useScreen()
+  const cardSize = scr.portrait ? fit(scr, 0.26, 90, 170) : 120
 
   useEffect(() => {
     if (!adding) void speak('Coucou ! Qui vient jouer aujourd’hui ?', { pitch: 1.45, rate: 0.95 })
@@ -27,7 +30,7 @@ export function Home({ onPlay, onParent }: { onPlay: () => void; onParent: () =>
           de Pépette
         </h1>
         <div className="home-guide">
-          <Pepette size={130} />
+          <Pepette size={scr.portrait ? fit(scr, 0.22, 90, 170) : 130} />
           <Bubble text="Coucou ! Qui vient jouer aujourd’hui ?" />
         </div>
         <div className="kid-cards">
@@ -41,7 +44,7 @@ export function Home({ onPlay, onParent }: { onPlay: () => void; onParent: () =>
                 onPlay()
               }}
             >
-              <Buddy id={k.buddy} size={120} outfit={k.outfit} />
+              <Buddy id={k.buddy} size={cardSize} outfit={k.outfit} />
               <div className="kid-name">{k.name}</div>
               <div className="kid-stars">⭐ {k.stars}</div>
             </button>
