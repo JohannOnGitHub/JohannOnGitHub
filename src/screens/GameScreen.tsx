@@ -4,7 +4,7 @@ import { Buddy, Friend, Pic } from '../components/Characters'
 import { Scene } from '../components/Scenes'
 import { Bubble, Confetti, HoldButton, TopBar } from '../components/ui'
 import { personalize, placeProgress, recordSuccess, useStore, type Kid } from '../lib/store'
-import { canListen, listen, scoreAnswer, speak, stopListening, stopSpeaking, thresholdForAge } from '../lib/speech'
+import { canListen, listen, preload, scoreAnswer, speak, stopListening, stopSpeaking, thresholdForAge } from '../lib/speech'
 import { sfx } from '../lib/sfx'
 import { fit, useScreen } from '../lib/useScreen'
 
@@ -48,24 +48,53 @@ export function GameScreen({
 
   const answers = useMemo(() => a.answers.map(P), [a, family]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const say = async (text: string, who: 'friend' | 'buddy' = 'friend') => {
-    if (!alive.current) return
+  // Every new sequence (intro, listening, feedback) gets a token; older sequences stop talking.
+  const run = useRef(0)
+  const voiceOf = (who: 'friend' | 'buddy') => (who === 'friend' ? friend.voice : buddy.voice)
+
+  const say = async (text: string, who: 'friend' | 'buddy', token: number) => {
+    if (!alive.current || token !== run.current) return false
     setSpeaker(who)
     setLine(text)
-    await speak(text, who === 'friend' ? friend.voice : buddy.voice)
+    await speak(text, voiceOf(who))
+    return alive.current && token === run.current
   }
 
-  const intro = async () => {
-    setPhase('telling')
-    await say(P(a.fact))
-    await say(P(a.ask))
-    if (little && a.hint) await say(P(a.hint))
-    if (a.kind === 'count') await say('Touche-les pour compter avec moi !', 'buddy')
-    if (a.kind === 'choose') await say('Touche les images pour entendre les mots !', 'buddy')
+  const introLines = (): [string, 'friend' | 'buddy'][] => {
+    const l: [string, 'friend' | 'buddy'][] = [
+      [P(a.fact), 'friend'],
+      [P(a.ask), 'friend'],
+    ]
+    if (little && a.hint) l.push([P(a.hint), 'friend'])
+    if (a.kind === 'count') l.push(['Touche-les pour compter avec moi !', 'buddy'])
+    if (a.kind === 'choose') l.push(['Touche les images pour entendre les mots !', 'buddy'])
     // Explain the microphone to the little ones every time, to the bigger ones for their first games.
     if (little || kid.done.length < 6)
-      await say(canListen ? 'Appuie sur le gros micro, et réponds en français !' : 'Dis ta réponse bien fort, en français !', 'buddy')
-    if (alive.current) setPhase('ready')
+      l.push([canListen ? 'Appuie sur le gros micro, et réponds en français !' : 'Dis ta réponse bien fort, en français !', 'buddy'])
+    return l
+  }
+
+  const missLine = (n: number) =>
+    n === 1 ? (little && a.hint ? `Presque ! ${P(a.hint)}` : 'Presque ! Essaie encore !') : a.hint ? `Essaie encore ! ${P(a.hint)}` : `Essaie encore ! ${family.parent} peut t’aider !`
+  const NOTHING = 'Je n’ai rien entendu. Appuie sur le micro, et parle bien fort !'
+
+  const intro = async () => {
+    const my = ++run.current
+    stopListening()
+    setPhase('telling')
+    setHeard('')
+    const lines = introLines()
+    preload(lines.map(([t, w]) => [t, voiceOf(w)]))
+    for (const [t, w] of lines) if (!(await say(t, w, my))) return
+    setPhase('ready')
+    // Get the feedback lines ready so the answer comes back instantly.
+    preload([
+      [P(a.cheer), friend.voice],
+      [`Bravo ${kid.name} ! Tu as gagné un autocollant !`, buddy.voice],
+      [missLine(1), friend.voice],
+      [missLine(2), friend.voice],
+      [NOTHING, buddy.voice],
+    ])
   }
 
   useEffect(() => {
@@ -77,49 +106,75 @@ export function GameScreen({
     void intro()
     return () => {
       alive.current = false
+      run.current++
       stopSpeaking()
       stopListening()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityId])
 
-  const succeed = async () => {
+  const succeed = async (effort = false) => {
+    const my = ++run.current
+    stopListening()
+    stopSpeaking()
     const wasComplete = placeProgress(kid, placeId).complete
-    const newly = recordSuccess(kid.id, a.id, tries === 0)
+    const newly = recordSuccess(kid.id, a.id, tries === 0 && !effort)
     sfx.win()
     setPhase('success')
     const nowKid = { ...kid, done: kid.done.includes(a.id) ? kid.done : [...kid.done, a.id] }
     const nowComplete = placeProgress(nowKid, placeId).complete
     if (!wasComplete && nowComplete) setBadgeWon(true)
     if (newly.length) onAchievements(newly)
-    await say(P(a.cheer))
-    await say(`Bravo ${kid.name} ! Tu as gagné un autocollant !`, 'buddy')
-    if (!wasComplete && nowComplete) await say(`Et le badge ${place.badge.name} ! Waouh !`, 'buddy')
-    await say(nextId ? 'Touche « Encore » pour jouer encore, ou la maison pour revenir !' : 'Touche le bouton pour retourner sur la carte !', 'buddy')
+    const lines: [string, 'friend' | 'buddy'][] = effort
+      ? [
+          [`Bravo d’avoir essayé ! On dit : ${P(a.answers[0])} !`, 'friend'],
+          [`Tu as gagné un autocollant, ${kid.name} !`, 'buddy'],
+        ]
+      : [
+          [P(a.cheer), 'friend'],
+          [`Bravo ${kid.name} ! Tu as gagné un autocollant !`, 'buddy'],
+        ]
+    if (!wasComplete && nowComplete) lines.push([`Et le badge ${place.badge.name} ! Waouh !`, 'buddy'])
+    lines.push([nextId ? 'Touche « Encore » pour jouer encore, ou la maison pour revenir !' : 'Touche le bouton pour retourner sur la carte !', 'buddy'])
+    for (const [t, w] of lines) if (!(await say(t, w, my))) return
   }
 
   const onMic = async () => {
-    if (phase === 'listening') return
-    sfx.listen()
+    if (phase !== 'ready') return
+    const my = ++run.current
+    stopSpeaking()
     setPhase('listening')
     setHeard('')
-    const results = await listen(little ? 8000 : 6500)
-    if (!alive.current) return
-    setHeard(results[0] ?? '')
-    const score = scoreAnswer(results, answers)
-    if (score >= thresholdForAge(kid.age)) return void succeed()
-    const n = tries + 1
+    sfx.listen()
+    await new Promise((r) => setTimeout(r, 300)) // don't let the beep reach the microphone
+    if (!alive.current || my !== run.current) return
+    const thr = thresholdForAge(kid.age)
+    const res = await listen({
+      maxMs: little ? 10000 : 8000,
+      silenceMs: little ? 2000 : 1600,
+      isMatch: (h) => scoreAnswer(h, answers) >= thr,
+      onHeard: (t) => setHeard(t),
+    })
+    if (!alive.current || my !== run.current) return
+    if (res.matched) return void succeed()
+    if (res.error === 'not-allowed') {
+      setPhase('miss')
+      await say(`Le micro n’est pas autorisé. ${family.parent}, il faut autoriser le micro pour Safari dans les réglages.`, 'buddy', my)
+      if (my === run.current) setPhase('ready')
+      return
+    }
+    const spoke = res.heard.length > 0
+    const n = spoke ? tries + 1 : tries
     setTries(n)
+    // Several real attempts: reward the effort rather than frustrate a little one.
+    if (spoke && n >= (little ? 3 : 4)) return void succeed(true)
     sfx.oops()
     setPhase('miss')
-    if (results.length === 0) await say('Je n’ai rien entendu… Appuie sur le micro et parle bien fort, comme un lion !')
-    else if (n === 1) await say(`Presque ! Essaie encore. ${a.hint ? P(a.hint) : P(a.ask)} Appuie sur le micro !`)
-    else await say(`Tu y es presque ! ${a.hint ? P(a.hint) : ''} ${family.parent} peut t’aider !`)
-    if (alive.current) setPhase('ready')
+    await say(spoke ? missLine(n) : NOTHING, spoke ? 'friend' : 'buddy', my)
+    if (alive.current && my === run.current) setPhase('ready')
   }
 
   const replay = () => {
-    stopListening()
     void intro()
   }
 
@@ -209,11 +264,11 @@ export function GameScreen({
             {canListen ? (
               <button
                 className={`mic ${phase === 'listening' ? 'listening' : ''} ${phase === 'ready' ? 'ready' : ''}`}
-                onClick={() => void onMic()}
-                disabled={phase === 'telling'}
+                onClick={() => (phase === 'listening' ? stopListening() : void onMic())}
+                disabled={phase !== 'ready' && phase !== 'listening'}
               >
-                <span className="mic-icon">🎤</span>
-                <span>{phase === 'listening' ? 'Je t’écoute…' : 'À toi !'}</span>
+                <span className="mic-icon">{phase === 'listening' ? '👂' : '🎤'}</span>
+                <span>{phase === 'listening' ? 'J’écoute…' : phase === 'ready' ? 'À toi !' : '…'}</span>
               </button>
             ) : (
               <div className="no-mic">
@@ -227,7 +282,11 @@ export function GameScreen({
             </HoldButton>
           </div>
         )}
-        {heard && phase !== 'success' && <div className="heard">J’ai entendu : « {heard} »</div>}
+        {heard && phase !== 'success' && (
+          <div className="heard">
+            {phase === 'listening' ? 'J’entends' : 'J’ai entendu'} : « {heard} »
+          </div>
+        )}
       </div>
     </div>
   )

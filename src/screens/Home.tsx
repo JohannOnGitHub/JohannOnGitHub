@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BUDDIES, type BuddyId } from '../data/content'
+import { BUDDIES, FRIENDS, type BuddyId } from '../data/content'
 import { Buddy, Pepette } from '../components/Characters'
 import { Scene } from '../components/Scenes'
 import { Bubble, HoldButton, MusicButton } from '../components/ui'
@@ -9,7 +9,7 @@ import { sfx } from '../lib/sfx'
 import { fit, useScreen } from '../lib/useScreen'
 
 const HOME_LINE = 'Coucou ! Qui vient jouer aujourd’hui ? Touche ton image pour commencer !'
-const PEPETTE_VOICE = { pitch: 1.45, rate: 0.95 }
+const PEPETTE_VOICE = FRIENDS.pepette.voice
 
 export function Home({ onPlay, onParent }: { onPlay: () => void; onParent: () => void }) {
   const { kids } = useStore()

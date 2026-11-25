@@ -3,7 +3,8 @@ import type { Session } from '@supabase/supabase-js'
 import { PLACES } from '../data/content'
 import { TopBar } from '../components/ui'
 import { removeKid, setFamily, updateKid, useStore } from '../lib/store'
-import { canListen, canSpeak, speak } from '../lib/speech'
+import { canListen, canSpeak } from '../lib/speech'
+import { VoicePicker } from './VoicePicker'
 import { onSession, sendCode, signOut, syncAvailable, verifyCode } from '../lib/sync'
 
 export function Parent({ onBack }: { onBack: () => void }) {
@@ -34,9 +35,11 @@ export function Parent({ onBack }: { onBack: () => void }) {
             Fonctionne au mieux dans Chrome (Android, ordinateur) ou Safari (iPad/iPhone, avec Siri activé). Sans micro, l’enfant parle à voix haute
             et vous validez avec le bouton 👍 (appui long). Vous pouvez toujours valider vous-même si le micro ne comprend pas un petit.
           </p>
-          <button className="btn" onClick={() => void speak('Bonjour ! Je parle français. On va bien s’amuser !')}>
-            🔊 Tester la voix
-          </button>
+        </section>
+
+        <section className="panel">
+          <h3>🎙️ Les voix des personnages</h3>
+          <VoicePicker />
         </section>
 
         <section className="panel">

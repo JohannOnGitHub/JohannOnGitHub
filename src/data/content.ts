@@ -1,3 +1,5 @@
+import type { VoiceStyle } from '../lib/speech'
+
 // All the world's content. Text in {braces} is personalised from the
 // family settings (what the children call their parent and grandparents).
 
@@ -36,25 +38,25 @@ export type Place = {
   activities: Activity[]
 }
 
-export const FRIENDS: Record<FriendId, { name: string; what: string; voice: { pitch: number; rate: number } }> = {
-  pepette: { name: 'Pépette', what: 'la marmotte', voice: { pitch: 1.45, rate: 0.95 } },
-  gaspard: { name: 'Gaspard', what: 'le chamois', voice: { pitch: 0.9, rate: 0.88 } },
-  cigalou: { name: 'Cigalou', what: 'la cigale', voice: { pitch: 1.6, rate: 1.0 } },
-  gaby: { name: 'Gaby', what: 'la mouette', voice: { pitch: 1.25, rate: 0.95 } },
-  korri: { name: 'Korri', what: 'le korrigan', voice: { pitch: 0.8, rate: 0.9 } },
+export const FRIENDS: Record<FriendId, { name: string; what: string; voice: VoiceStyle }> = {
+  pepette: { name: 'Pépette', what: 'la marmotte', voice: { id: 'woman' } },
+  gaspard: { name: 'Gaspard', what: 'le chamois', voice: { id: 'man' } },
+  cigalou: { name: 'Cigalou', what: 'la cigale', voice: { id: 'woman' } },
+  gaby: { name: 'Gaby', what: 'la mouette', voice: { id: 'woman' } },
+  korri: { name: 'Korri', what: 'le korrigan', voice: { id: 'man' } },
 }
 
-export const BUDDIES: Record<BuddyId, { name: string; title: string; voice: { pitch: number; rate: number }; blurb: string }> = {
+export const BUDDIES: Record<BuddyId, { name: string; title: string; voice: VoiceStyle; blurb: string }> = {
   rocco: {
     name: 'Rocco',
     title: 'le chiot sauveteur',
-    voice: { pitch: 1.2, rate: 0.95 },
+    voice: { id: 'boy' },
     blurb: 'Un chiot saint-bernard super courageux, avec son camion géant aux grosses roues et sa corde magique pour grimper partout !',
   },
   givrine: {
     name: 'Givrine',
     title: 'la princesse des neiges',
-    voice: { pitch: 1.35, rate: 0.92 },
+    voice: { id: 'girl' },
     blurb: 'Une princesse des glaciers qui fait danser les flocons, adore les jolies tenues et brille comme le givre !',
   },
 }
@@ -75,7 +77,7 @@ export const PLACES: Place[] = [
         fact: 'Dans les montagnes vivent des marmottes, comme moi ! Quand on a peur, on siffle très fort : fiiiou !',
         ask: 'Comment s’appelle cet animal ?',
         hint: 'C’est une mar… marmotte ! Dis : marmotte !',
-        answers: ['marmotte'],
+        answers: ['marmotte', 'marmottes'],
         cheer: 'Oui ! Une marmotte ! Fiiiou !',
         picture: 'svg:marmotte',
         sticker: { emoji: 'svg:marmotte', name: 'La marmotte' },
@@ -86,7 +88,7 @@ export const PLACES: Place[] = [
         fact: 'L’hiver, la montagne devient toute blanche. On fait du ski et de la luge !',
         ask: 'Qu’est-ce qui est blanc et froid, et tombe du ciel ?',
         hint: 'C’est la nei… neige ! Dis : la neige !',
-        answers: ['neige', 'flocon', 'flocons'],
+        answers: ['neige', 'flocon', 'flocons', 'il neige', 'la neige', 'bonhomme de neige'],
         cheer: 'Bravo ! La neige ! Brrr, ça pique le nez !',
         picture: '❄️',
         sticker: { emoji: '☃️', name: 'Le bonhomme de neige' },
@@ -108,7 +110,7 @@ export const PLACES: Place[] = [
         kind: 'repeat',
         fact: 'Tout là-haut, il y a de la glace toute l’année. Ça s’appelle un glacier !',
         ask: 'Dis bonjour à la montagne : « Bonjour la montagne ! »',
-        answers: ['bonjour la montagne'],
+        answers: ['bonjour la montagne', 'bonjour montagne'],
         cheer: 'Bonjour ! … bonjour… bonjour… Tu entends l’écho ?',
         picture: '🏔️',
         sticker: { emoji: '🏔️', name: 'Le glacier' },
@@ -119,7 +121,7 @@ export const PLACES: Place[] = [
         fact: 'Pour glisser sur la neige, on met des skis, un bonnet et des gants bien chauds.',
         ask: 'Qu’est-ce qu’on met pour glisser sur la neige : des skis ou des bottes ?',
         hint: 'Des skis ! Dis : les skis !',
-        answers: ['ski', 'skis', 'des skis'],
+        answers: ['ski', 'skis', 'skier', 'les skis', 'des skis', 'faire du ski'],
         cheer: 'Oui, des skis ! Et c’est parti, ziiiioum !',
         picture: '⛷️',
         options: [
@@ -145,7 +147,7 @@ export const PLACES: Place[] = [
         fact: 'Au pied du village, il y a un lac immense, tout bleu-vert : le lac de Serre-Ponçon !',
         ask: 'Comment on appelle cette grande eau bleue ?',
         hint: 'C’est un l… un lac ! Dis : un lac !',
-        answers: ['lac'],
+        answers: ['lac', 'eau', 'lac de serre poncon'],
         cheer: 'Oui, un lac ! Plouf, plouf !',
         picture: '🏞️',
         sticker: { emoji: '🏞️', name: 'Le lac' },
@@ -156,7 +158,7 @@ export const PLACES: Place[] = [
         fact: 'Sur le lac, des bateaux à voile glissent avec le vent. Fouuu !',
         ask: 'Qu’est-ce qui flotte sur l’eau ?',
         hint: 'Un ba… un bateau ! Dis : bateau !',
-        answers: ['bateau', 'bateaux', 'voilier'],
+        answers: ['bateau', 'bateaux', 'voilier', 'voile', 'navire'],
         cheer: 'Un bateau ! Hissez les voiles, moussaillon !',
         picture: '⛵',
         sticker: { emoji: '⛵', name: 'Le voilier' },
@@ -167,7 +169,7 @@ export const PLACES: Place[] = [
         fact: 'Tout en haut du village, il y a un vieux fort, construit il y a très, très longtemps pour protéger la vallée.',
         ask: 'Qu’est-ce qu’il y a tout en haut du village : un fort ou une piscine ?',
         hint: 'Un fort ! Dis : un fort !',
-        answers: ['fort', 'chateau', 'forteresse'],
+        answers: ['fort', 'chateau', 'forteresse', 'tour', 'muraille'],
         cheer: 'Un fort ! Tu es un vrai gardien du village !',
         picture: '🏰',
         options: [
@@ -236,7 +238,7 @@ export const PLACES: Place[] = [
         kind: 'repeat',
         fact: 'Quand il fait très chaud, les cigales chantent dans les arbres. C’est moi qui fais ce bruit !',
         ask: 'Dis comme moi : « Il fait chaud ! »',
-        answers: ['il fait chaud', 'fait chaud'],
+        answers: ['il fait chaud', 'fait chaud', 'chaud'],
         cheer: 'Il fait chaud ! Cri-cri-cri ! Tu chantes comme une cigale !',
         picture: '🌞',
         sticker: { emoji: '🦗', name: 'La cigale' },
@@ -259,7 +261,7 @@ export const PLACES: Place[] = [
         fact: 'Les abeilles adorent butiner les fleurs de lavande. Bzzz !',
         ask: 'De quelle couleur est la lavande : violette ou verte ?',
         hint: 'Violette ! Dis : violet !',
-        answers: ['violet', 'violette', 'mauve'],
+        answers: ['violet', 'violette', 'mauve', 'lila'],
         cheer: 'Violette ! Comme un joli ruban !',
         picture: '🐝',
         options: [
@@ -285,7 +287,7 @@ export const PLACES: Place[] = [
         fact: 'Marseille est au bord de la mer Méditerranée. L’eau est bleue… et salée !',
         ask: 'Qu’est-ce que c’est, toute cette eau bleue ?',
         hint: 'C’est la m… la mer ! Dis : la mer !',
-        answers: ['mer', 'ocean'],
+        answers: ['mer', 'ocean', 'la mer', 'mediterranee', 'eau'],
         cheer: 'La mer ! Splash !',
         picture: '🌊',
         sticker: { emoji: '🌊', name: 'La mer' },
@@ -296,7 +298,7 @@ export const PLACES: Place[] = [
         fact: 'Au Vieux-Port, les pêcheurs vendent leurs poissons tous les matins.',
         ask: 'Qu’est-ce que les pêcheurs attrapent ?',
         hint: 'Des poi… poissons ! Dis : poisson !',
-        answers: ['poisson', 'poissons'],
+        answers: ['poisson', 'poissons', 'peche'],
         cheer: 'Des poissons ! Miam, ce soir c’est bouillabaisse !',
         picture: '🎣',
         sticker: { emoji: '🎣', name: 'Le pêcheur' },
@@ -306,7 +308,7 @@ export const PLACES: Place[] = [
         kind: 'repeat',
         fact: 'Sur la colline, il y a une grande église avec une statue dorée qui veille sur la ville. Les Marseillais l’appellent « la Bonne Mère » !',
         ask: 'Dis avec moi : « la Bonne Mère » !',
-        answers: ['bonne mere'],
+        answers: ['bonne mere', 'la bonne mere'],
         cheer: 'La Bonne Mère ! Elle brille au soleil !',
         picture: '⛪',
         sticker: { emoji: '⛪', name: 'La Bonne Mère' },
@@ -317,7 +319,7 @@ export const PLACES: Place[] = [
         fact: 'Marseille est célèbre pour son savon : le savon de Marseille !',
         ask: 'Avec quoi on se lave les mains : du savon ou de la confiture ?',
         hint: 'Du savon ! Dis : savon !',
-        answers: ['savon'],
+        answers: ['savon', 'du savon', 'savon de marseille'],
         cheer: 'Du savon ! Frotte, frotte, et plein de bulles !',
         picture: '🧼',
         options: [
@@ -365,7 +367,7 @@ export const PLACES: Place[] = [
         fact: 'En Bretagne, on mange des crêpes et des galettes. Miam miam !',
         ask: 'Qu’est-ce que c’est, ce rond tout doré ?',
         hint: 'Une crê… une crêpe ! Dis : crêpe !',
-        answers: ['crepe', 'crepes', 'galette'],
+        answers: ['crepe', 'crepes', 'galette', 'galettes'],
         cheer: 'Une crêpe ! Avec du chocolat ou du sucre ?',
         picture: '🥞',
         sticker: { emoji: '🥞', name: 'La crêpe' },
@@ -376,7 +378,7 @@ export const PLACES: Place[] = [
         fact: 'Au bord de la mer, il y a de grandes tours avec une lumière qui tourne. Elles guident les bateaux la nuit.',
         ask: 'Comment s’appelle cette tour avec une lumière ?',
         hint: 'C’est un pha… un phare ! Dis : phare !',
-        answers: ['phare', 'phares'],
+        answers: ['phare', 'phares', 'lumiere', 'tour'],
         cheer: 'Un phare ! Sa lumière brille toute la nuit !',
         picture: 'svg:phare',
         sticker: { emoji: 'svg:phare', name: 'Le phare' },
@@ -424,7 +426,7 @@ export const PLACES: Place[] = [
         fact: 'En Bretagne, il pleut souvent… alors on met un ciré jaune et des bottes !',
         ask: 'Qu’est-ce qu’on ouvre quand il pleut ?',
         hint: 'Un para… parapluie ! Dis : parapluie !',
-        answers: ['parapluie', 'parapluies'],
+        answers: ['parapluie', 'parapluies', 'pépin'],
         cheer: 'Un parapluie ! Plic, ploc, on reste au sec !',
         picture: '☂️',
         sticker: { emoji: '☂️', name: 'Le parapluie' },

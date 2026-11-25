@@ -19,7 +19,7 @@ export function Splash({ onStart }: { onStart: () => void }) {
     const t = setTimeout(() => {
       if (c?.state === 'running') {
         music.unlock()
-        void speak('Bonjour ! Touche le gros bouton pour jouer avec moi !', { pitch: 1.45, rate: 0.95 })
+        void speak('Bonjour ! Touche le gros bouton pour jouer avec moi !', { id: 'woman' })
       }
     }, 400)
     return () => clearTimeout(t)

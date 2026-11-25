@@ -1762,3 +1762,54 @@ select:focus {
     transform: translate(-14px, -22px) scale(0.92);
   }
 }
+.voice-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.voice-role {
+  border: 2px solid #eef3f8;
+  border-radius: 16px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.voice-role-head {
+  display: flex;
+  flex-direction: column;
+}
+.voice-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.voice-search input {
+  flex: 1;
+  font-size: 16px;
+}
+.voice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.voice-item {
+  background: #f6f9fc;
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.btn.small {
+  font-size: 16px;
+  padding: 8px 14px;
+}
+.muted.small {
+  font-size: 13px;
+}
+.voice-msg {
+  font-weight: 700;
+}

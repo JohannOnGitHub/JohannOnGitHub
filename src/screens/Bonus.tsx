@@ -212,10 +212,11 @@ export function Virages({ kid, onBack }: { kid: Kid; onBack: () => void }) {
     if (busy) return
     setBusy(true)
     setMsg('Je t’écoute… crie fort !')
-    const heard = await listen(4000)
+    const SHOUT = /allez|allé|aller|vroum|vroom|broum|go|plus vite|en avant|vite/i
+    const { heard } = await listen({ maxMs: 5000, silenceMs: 1000, isMatch: (h) => SHOUT.test(h.join(' ')) })
     setBusy(false)
-    const t = heard.join(' ').toLowerCase()
-    if (/allez|vroum|vroom|go|plus vite|en avant|vite/.test(t)) {
+    const t = heard.join(' ')
+    if (SHOUT.test(t)) {
       setMsg('Super ! Encore !')
       advance(3)
     } else if (heard.length) {

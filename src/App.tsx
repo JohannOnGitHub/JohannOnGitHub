@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ACHIEVEMENTS, type BonusGame, type PlaceId } from './data/content'
 import { selectKid, useStore } from './lib/store'
 import { initSync } from './lib/sync'
-import { stopListening, stopSpeaking } from './lib/speech'
+import { setVoiceIds, stopListening, stopSpeaking } from './lib/speech'
 import { sfx } from './lib/sfx'
 import { music, type TuneId } from './lib/music'
 import { Splash } from './screens/Splash'
@@ -25,7 +25,8 @@ type Route =
   | { name: 'bonusgame'; game: BonusGame['id'] }
 
 export default function App() {
-  const { kids, currentKid } = useStore()
+  const { kids, currentKid, family } = useStore()
+  setVoiceIds(Object.fromEntries(Object.entries(family.voices ?? {}).map(([k, v]) => [k, v?.id ?? ''])))
   const kid = kids.find((k) => k.id === currentKid) ?? null
   const [route, setRoute] = useState<Route>({ name: 'home' })
   const [toasts, setToasts] = useState<string[]>([])

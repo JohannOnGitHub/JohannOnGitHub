@@ -1,8 +1,13 @@
 import { music } from './music'
+import { ac } from './sfx'
 
-// Voice engine: French text-to-speech + speech recognition with
-// age-aware, forgiving matching (a 3-year-old's "mamotte" is a marmotte!).
+// Voice engine:
+// - Speaking: natural ElevenLabs voices through our /api/tts function (cached),
+//   falling back to the device's French voice if that isn't available.
+// - Listening: patient speech recognition that keeps listening while a child
+//   thinks, stops as soon as the right answer is heard, and is forgiving.
 
+type Alt = { transcript: string }
 type Rec = {
   lang: string
   interimResults: boolean
@@ -11,7 +16,7 @@ type Rec = {
   start: () => void
   stop: () => void
   abort: () => void
-  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null
+  onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<Alt> & { isFinal: boolean }> }) => void) | null
   onerror: ((e: { error: string }) => void) | null
   onend: (() => void) | null
 }
@@ -25,110 +30,310 @@ const RecCtor: (new () => Rec) | undefined =
 export const canListen = !!RecCtor
 export const canSpeak = typeof window !== 'undefined' && 'speechSynthesis' in window
 
-// ---------- Text to speech ----------
+// ---------- Voices ----------
 
-let frVoice: SpeechSynthesisVoice | null = null
-function pickVoice() {
+/** Which natural voice a character uses. */
+export type VoiceId = 'boy' | 'girl' | 'woman' | 'man'
+export type VoiceStyle = { id: VoiceId; rate?: number }
+
+// Device fallback: pick a male or a female French voice, no robotic pitch tricks.
+const MALE = /thomas|nicolas|henri|daniel|paul|jacques|male|homme|guillaume|antoine|remy|rémy|mathieu/i
+const FEMALE = /audrey|aurélie|aurelie|amélie|amelie|marie|virginie|julie|denise|eloise|élise|elise|female|femme|celine|céline|google français/i
+let deviceVoices: SpeechSynthesisVoice[] = []
+function loadDeviceVoices() {
   if (!canSpeak) return
-  const voices = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith('fr'))
-  // Prefer France French and nicer-sounding voices when available.
   const score = (v: SpeechSynthesisVoice) =>
-    (v.lang.toLowerCase() === 'fr-fr' ? 4 : 0) +
-    (/premium|enhanced|natural|neural|google|amélie|amelie|thomas|audrey|marie/i.test(v.name) ? 2 : 0) +
-    (v.localService ? 1 : 0)
-  frVoice = voices.sort((a, b) => score(b) - score(a))[0] ?? null
+    (v.lang.toLowerCase() === 'fr-fr' ? 4 : 0) + (/premium|enhanced|amélior|natural|neural/i.test(v.name) ? 3 : 0) + (v.localService ? 1 : 0)
+  deviceVoices = speechSynthesis
+    .getVoices()
+    .filter((v) => v.lang.toLowerCase().startsWith('fr'))
+    .sort((a, b) => score(b) - score(a))
 }
 if (canSpeak) {
-  pickVoice()
-  speechSynthesis.onvoiceschanged = pickVoice
+  loadDeviceVoices()
+  speechSynthesis.onvoiceschanged = loadDeviceVoices
+}
+function deviceVoiceFor(id: VoiceId) {
+  const wantMale = id === 'boy' || id === 'man'
+  return deviceVoices.find((v) => (wantMale ? MALE : FEMALE).test(v.name)) ?? deviceVoices[0] ?? null
 }
 
-export type VoiceStyle = { pitch: number; rate: number }
+// ---------- Natural voices (ElevenLabs via /api/tts) ----------
 
-export function speak(text: string, style: VoiceStyle = { pitch: 1.1, rate: 0.9 }): Promise<void> {
+let cloud: 'unknown' | 'on' | 'off' = 'unknown'
+/** Voices chosen by the parents (ElevenLabs voice ids), per role. */
+let chosen: Partial<Record<VoiceId, string>> = {}
+export function setVoiceIds(v: Partial<Record<VoiceId, string>>) {
+  const changed = JSON.stringify(v) !== JSON.stringify(chosen)
+  chosen = { ...v }
+  if (changed && cloud === 'off') cloud = 'unknown' // a voice was just picked: try again
+}
+const cache = new Map<string, Promise<AudioBuffer | null>>()
+const noVoice = new Set<VoiceId>()
+let current: { stop: () => void } | null = null
+
+function clean(text: string) {
+  return text.replace(/[«»]/g, '').replace(/\s+/g, ' ').trim()
+}
+
+function fetchVoice(text: string, id: VoiceId): Promise<AudioBuffer | null> {
+  const vid = chosen[id] ?? ''
+  const key = `${vid || id}|${text}`
+  let p = cache.get(key)
+  if (!p) {
+    p = (async () => {
+      if (cloud === 'off' || (!vid && noVoice.has(id))) return null
+      const c = ac()
+      if (!c) return null
+      try {
+        const r = await fetch(`/api/tts?v=${id}${vid ? `&id=${vid}` : ''}&t=${encodeURIComponent(text)}`)
+        if (r.status === 503 || r.status === 404) {
+          // No key on the server, or no voice chosen for this role: use the device voice.
+          if (!vid) noVoice.add(id)
+          if (r.status === 404 || vid) cloud = 'off'
+          return null
+        }
+        if (!r.ok) return null
+        cloud = 'on'
+        const buf = await r.arrayBuffer()
+        return await c.decodeAudioData(buf)
+      } catch {
+        return null
+      }
+    })()
+    cache.set(key, p)
+    p.then((b) => {
+      if (!b) cache.delete(key)
+    })
+  }
+  return p
+}
+
+/** Parents' corner: hear a voice id say a sample sentence. Returns an error message, or null. */
+export async function tryVoice(voiceId: string, text: string): Promise<string | null> {
+  const c = ac()
+  if (!c) return 'Audio indisponible'
+  try {
+    const r = await fetch(`/api/tts?id=${voiceId}&t=${encodeURIComponent(text)}`)
+    if (!r.ok) return r.status === 503 ? 'Clé ElevenLabs manquante sur Vercel.' : `Erreur ${r.status} : ${(await r.text()).slice(0, 160)}`
+    const b = await c.decodeAudioData(await r.arrayBuffer())
+    stopSpeaking()
+    await playBuffer(b)
+    return null
+  } catch (e) {
+    return (e as Error).message
+  }
+}
+
+/** Start downloading lines that will be spoken soon, so there's no wait. */
+export function preload(lines: [string, VoiceStyle][]) {
+  if (cloud === 'off') return
+  for (const [t, v] of lines) void fetchVoice(clean(t), v.id)
+}
+
+function playBuffer(b: AudioBuffer, rate = 1): Promise<void> {
+  return new Promise((resolve) => {
+    const c = ac()
+    if (!c) return resolve()
+    const src = c.createBufferSource()
+    src.buffer = b
+    src.playbackRate.value = rate
+    src.connect(c.destination)
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      if (current?.stop === stop) current = null
+      resolve()
+    }
+    const stop = () => {
+      try {
+        src.stop()
+      } catch {
+        /* already stopped */
+      }
+      finish()
+    }
+    src.onended = finish
+    current = { stop }
+    src.start()
+  })
+}
+
+function speakDevice(text: string, style: VoiceStyle): Promise<void> {
   return new Promise((resolve) => {
     if (!canSpeak) return resolve()
     speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, ''))
+    const u = new SpeechSynthesisUtterance(text)
     u.lang = 'fr-FR'
-    if (frVoice) u.voice = frVoice
-    u.pitch = style.pitch
-    u.rate = style.rate
+    const v = deviceVoiceFor(style.id)
+    if (v) u.voice = v
+    u.rate = style.rate ?? 0.95
+    u.pitch = 1
     let done = false
-    music.duck(0.35)
     const finish = () => {
-      if (!done) {
-        done = true
-        music.duck(1)
-        resolve()
-      }
+      if (done) return
+      done = true
+      if (current?.stop === stop) current = null
+      resolve()
+    }
+    const stop = () => {
+      speechSynthesis.cancel()
+      finish()
     }
     u.onend = finish
     u.onerror = finish
-    // Safety net: some browsers never fire onend.
-    setTimeout(finish, 1500 + text.length * 110)
+    setTimeout(finish, 2000 + text.length * 120) // some browsers never fire onend
+    current = { stop }
     speechSynthesis.speak(u)
   })
 }
 
+/** Say a line in a character's voice. Resolves when finished (or interrupted). */
+export async function speak(text: string, style: VoiceStyle = { id: 'woman' }): Promise<void> {
+  const t = clean(text)
+  if (!t) return
+  stopSpeaking()
+  const token = ++speakToken
+  music.duck(0.3)
+  try {
+    const b = await fetchVoice(t, style.id)
+    if (token !== speakToken) return // something else started talking meanwhile
+    if (b) await playBuffer(b, style.rate ?? 1)
+    else await speakDevice(t, style)
+  } finally {
+    if (token === speakToken) music.duck(1)
+  }
+}
+let speakToken = 0
+
 export function stopSpeaking() {
+  speakToken++
+  current?.stop()
+  current = null
   if (canSpeak) speechSynthesis.cancel()
 }
 
-// ---------- Speech recognition ----------
+// ---------- Listening ----------
 
-let current: Rec | null = null
+let activeRec: Rec | null = null
+let cancelListen: (() => void) | null = null
 
-/** Listen once; resolves with every transcript alternative heard ([] if nothing). */
-export function listen(timeoutMs = 7000): Promise<string[]> {
+export type ListenResult = { heard: string[]; matched: boolean; error?: 'not-allowed' }
+
+/**
+ * Listen patiently: keeps the microphone open while a child thinks (iPhone
+ * stops after short silences, so we quietly restart it), finishes as soon as
+ * `isMatch` accepts what was heard, or after `silenceMs` of quiet once the
+ * child has spoken, or after `maxMs`.
+ */
+export function listen(opts: {
+  maxMs?: number
+  silenceMs?: number
+  isMatch?: (heard: string[]) => boolean
+  onHeard?: (text: string) => void
+}): Promise<ListenResult> {
+  const { maxMs = 9000, silenceMs = 1600, isMatch, onHeard } = opts
   return new Promise((resolve) => {
-    if (!RecCtor) return resolve([])
+    if (!RecCtor) return resolve({ heard: [], matched: false })
     stopSpeaking()
-    current?.abort()
-    const rec = new RecCtor()
-    current = rec
-    rec.lang = 'fr-FR'
-    rec.interimResults = false
-    rec.continuous = false
-    rec.maxAlternatives = 5
-    const heard: string[] = []
-    let settled = false
+    cancelListen?.()
     music.duck(0)
-    const settle = () => {
-      if (settled) return
-      settled = true
-      music.duck(1)
-      clearTimeout(timer)
-      if (current === rec) current = null
-      resolve(heard)
-    }
-    rec.onresult = (e) => {
-      for (let i = 0; i < e.results.length; i++) {
-        const r = e.results[i]
-        for (let j = 0; j < r.length; j++) heard.push(r[j].transcript)
-      }
-    }
-    rec.onerror = () => settle()
-    rec.onend = () => settle()
-    const timer = setTimeout(() => {
+    const heard = new Set<string>()
+    const t0 = Date.now()
+    let lastSpeech = 0
+    let finished = false
+    let error: ListenResult['error']
+    let restarts = 0
+
+    const finish = (matched: boolean, wait = 450) => {
+      if (finished) return
+      finished = true
+      clearInterval(tick)
+      const rec = activeRec
       try {
-        rec.stop()
+        rec?.stop()
       } catch {
         /* ignore */
       }
-      setTimeout(settle, 600)
-    }, timeoutMs)
-    try {
-      rec.start()
-    } catch {
-      settle()
+      // Give the recognizer a moment to deliver its final words.
+      setTimeout(
+        () => {
+          if (activeRec === rec) {
+            try {
+              rec?.abort()
+            } catch {
+              /* ignore */
+            }
+            activeRec = null
+          }
+          cancelListen = null
+          music.duck(1)
+          resolve({ heard: [...heard], matched: matched || (!!isMatch && isMatch([...heard])), error })
+        },
+        matched ? 0 : wait,
+      )
     }
+    cancelListen = () => finish(false, 0)
+
+    const start = () => {
+      if (finished) return
+      const rec = new RecCtor()
+      activeRec = rec
+      rec.lang = 'fr-FR'
+      rec.continuous = true
+      rec.interimResults = true
+      rec.maxAlternatives = 5
+      rec.onresult = (e) => {
+        let latest = ''
+        for (let i = 0; i < e.results.length; i++) {
+          const r = e.results[i]
+          for (let j = 0; j < r.length; j++) {
+            const tr = r[j].transcript.trim()
+            if (tr) heard.add(tr)
+            if (j === 0 && tr) latest = tr
+          }
+        }
+        if (latest) {
+          lastSpeech = Date.now()
+          onHeard?.(latest)
+        }
+        if (isMatch && isMatch([...heard])) finish(true)
+      }
+      rec.onerror = (e) => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          error = 'not-allowed'
+          finish(false, 0)
+        }
+      }
+      rec.onend = () => {
+        if (finished || activeRec !== rec) return
+        // iPhone ends on short silences: keep listening while there's time left.
+        const quietTooLong = lastSpeech && Date.now() - lastSpeech > silenceMs
+        if (!quietTooLong && Date.now() - t0 < maxMs - 500 && restarts < 12) {
+          restarts++
+          setTimeout(start, 120)
+        } else finish(false)
+      }
+      try {
+        rec.start()
+      } catch {
+        finish(false, 0)
+      }
+    }
+
+    const tick = setInterval(() => {
+      const now = Date.now()
+      if (lastSpeech && now - lastSpeech > silenceMs) finish(false)
+      else if (now - t0 > maxMs) finish(false)
+    }, 150)
+
+    start()
   })
 }
 
 export function stopListening() {
-  current?.abort()
-  current = null
+  cancelListen?.()
 }
 
 // ---------- Matching ----------
@@ -218,7 +423,13 @@ export function scoreAnswer(heard: string[], answers: string[]): number {
         const hit = at.filter((w) => ht.some((x) => similarity(x, w) >= 0.75)).length
         best = Math.max(best, hit / at.length)
       } else {
-        for (const w of ht) best = Math.max(best, similarity(w, at[0] ?? an))
+        const target = at[0] ?? an
+        for (const w of ht) {
+          best = Math.max(best, similarity(w, target))
+          // Same word with another ending: « skier » for « ski », « marmottes » for « marmotte ».
+          if (target.length >= 3 && w.length >= 3 && (w.startsWith(target) || (w.length >= 4 && target.startsWith(w))))
+            best = Math.max(best, 0.9)
+        }
         // Words glued or split by the recognizer ("mar motte").
         best = Math.max(best, similarity(ht.join(''), at[0] ?? an) * 0.95)
       }
@@ -230,9 +441,9 @@ export function scoreAnswer(heard: string[], answers: string[]): number {
 /** How forgiving we are, by age. */
 export function thresholdForAge(age: number) {
   if (age <= 3) return 0.5
-  if (age <= 4) return 0.6
-  if (age <= 6) return 0.7
-  return 0.8
+  if (age <= 4) return 0.58
+  if (age <= 6) return 0.62
+  return 0.72
 }
 
 /**
@@ -242,7 +453,7 @@ export function thresholdForAge(age: number) {
 export function unlockSpeechOnFirstTouch() {
   if (!canSpeak) return
   const unlock = () => {
-    pickVoice()
+    loadDeviceVoices()
     const u = new SpeechSynthesisUtterance(' ')
     u.volume = 0
     u.lang = 'fr-FR'
