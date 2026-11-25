@@ -8,6 +8,9 @@ import { speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
 import { fit, useScreen } from '../lib/useScreen'
 
+const HOME_LINE = 'Coucou ! Qui vient jouer aujourd’hui ? Touche ton image pour commencer !'
+const PEPETTE_VOICE = { pitch: 1.45, rate: 0.95 }
+
 export function Home({ onPlay, onParent }: { onPlay: () => void; onParent: () => void }) {
   const { kids } = useStore()
   const [adding, setAdding] = useState(kids.length === 0)
@@ -15,7 +18,7 @@ export function Home({ onPlay, onParent }: { onPlay: () => void; onParent: () =>
   const cardSize = scr.portrait ? fit(scr, 0.26, 90, 170) : 120
 
   useEffect(() => {
-    if (!adding) void speak('Coucou ! Qui vient jouer aujourd’hui ?', { pitch: 1.45, rate: 0.95 })
+    if (!adding) void speak(HOME_LINE, PEPETTE_VOICE)
   }, [adding])
 
   if (adding) return <Setup onDone={() => setAdding(false)} first={kids.length === 0} onCancel={() => setAdding(false)} />
@@ -30,10 +33,10 @@ export function Home({ onPlay, onParent }: { onPlay: () => void; onParent: () =>
           de Pépette
         </h1>
         <div className="home-guide">
-          <button onClick={() => void speak('Coucou ! Qui vient jouer aujourd’hui ?', { pitch: 1.45, rate: 0.95 })} aria-label="Pépette">
+          <button onClick={() => void speak(HOME_LINE, PEPETTE_VOICE)} aria-label="Pépette">
             <Pepette size={scr.portrait ? fit(scr, 0.22, 90, 170) : 130} />
           </button>
-          <Bubble text="Coucou ! Qui vient jouer aujourd’hui ?" />
+          <Bubble text={HOME_LINE} voice={PEPETTE_VOICE} />
         </div>
         <div className="kid-cards">
           {kids.map((k) => (

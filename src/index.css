@@ -1730,3 +1730,35 @@ select:focus {
   bottom: calc(12px + env(safe-area-inset-bottom));
   z-index: 5 !important;
 }
+.bubble.tappable {
+  cursor: pointer;
+  padding-right: 40px;
+}
+.bubble-ear {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-size: 18px;
+  opacity: 0.7;
+}
+.play-wrap {
+  position: relative;
+}
+.tap-hand {
+  position: absolute;
+  right: -10px;
+  bottom: -54px;
+  font-size: 64px;
+  animation: tap-hand 1.2s ease-in-out infinite;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
+}
+@keyframes tap-hand {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-14px, -22px) scale(0.92);
+  }
+}

@@ -24,7 +24,7 @@ export function PlaceScreen({
   const { family } = useStore()
   const place = PLACES.find((p) => p.id === placeId)!
   const friend = FRIENDS[place.friend]
-  const welcome = personalize(place.welcome, family)
+  const welcome = personalize(place.welcome, family) + ' Touche une image pour jouer !'
   const [talking, setTalking] = useState(true)
   const prog = placeProgress(kid, placeId)
   const scr = useScreen()
@@ -46,7 +46,7 @@ export function PlaceScreen({
           <div className="cast-friend">
             <Friend id={place.friend} size={scr.portrait ? fit(scr, 0.42, 130, 320) : 230} talking={talking} />
           </div>
-          <Bubble who={`${friend.name} ${friend.what}`} text={welcome} />
+          <Bubble who={`${friend.name} ${friend.what}`} text={welcome} voice={friend.voice} />
           <div className="cast-buddy">
             <Buddy id={kid.buddy} size={scr.portrait ? fit(scr, 0.32, 100, 240) : 170} outfit={kid.outfit} />
           </div>

@@ -24,7 +24,10 @@ export function MapScreen({
   const { family } = useStore()
   const buddy = BUDDIES[kid.buddy]
   const scr = useScreen()
-  const line = `Coucou ${kid.name} ! Où est-ce qu’on va aujourd’hui ?`
+  const line =
+    kid.done.length === 0
+      ? `Coucou ${kid.name} ! Voici la carte de France. Touche les montagnes pour commencer l’aventure !`
+      : `Coucou ${kid.name} ! Où est-ce qu’on va aujourd’hui ? Touche un endroit sur la carte !`
   useEffect(() => {
     void speak(line, buddy.voice)
   }, [line, buddy.voice])
@@ -69,8 +72,8 @@ export function MapScreen({
         </div>
         <div className="map-side">
           <Buddy id={kid.buddy} size={scr.portrait ? fit(scr, 0.24, 80, 170) : 150} outfit={kid.outfit} />
-          <Bubble who={buddy.name} text={line} />
-          <button className="big-btn album" onClick={() => (sfx.tap(), onAlbum())}>
+          <Bubble who={buddy.name} text={line} voice={buddy.voice} />
+          <button className="big-btn album" onClick={() => (sfx.tap(), onAlbum())} aria-label="Mon album">
             📒 Mon album
           </button>
           <button className="big-btn bonus" onClick={() => (sfx.tap(), onBonus())}>

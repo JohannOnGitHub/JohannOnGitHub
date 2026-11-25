@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { sfx } from '../lib/sfx'
 import { music, useMusicOn } from '../lib/music'
+import { speak, type VoiceStyle } from '../lib/speech'
 
 export function MusicButton({ className }: { className?: string }) {
   const on = useMusicOn()
@@ -11,11 +12,17 @@ export function MusicButton({ className }: { className?: string }) {
   )
 }
 
-export function Bubble({ who, text, side = 'left' }: { who?: string; text: string; side?: 'left' | 'right' }) {
+/** Speech bubble. Children can't read yet, so tapping it reads it aloud again. */
+export function Bubble({ who, text, side = 'left', voice }: { who?: string; text: string; side?: 'left' | 'right'; voice?: VoiceStyle }) {
   return (
-    <div className={`bubble bubble-${side}`}>
+    <div
+      className={`bubble bubble-${side} ${voice ? 'tappable' : ''}`}
+      onClick={voice ? () => void speak(text, voice) : undefined}
+      role={voice ? 'button' : undefined}
+    >
       {who && <div className="bubble-who">{who}</div>}
       <div>{text}</div>
+      {voice && <span className="bubble-ear" aria-hidden>🔊</span>}
     </div>
   )
 }

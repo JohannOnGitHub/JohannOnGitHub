@@ -60,6 +60,11 @@ export function GameScreen({
     await say(P(a.fact))
     await say(P(a.ask))
     if (little && a.hint) await say(P(a.hint))
+    if (a.kind === 'count') await say('Touche-les pour compter avec moi !', 'buddy')
+    if (a.kind === 'choose') await say('Touche les images pour entendre les mots !', 'buddy')
+    // Explain the microphone to the little ones every time, to the bigger ones for their first games.
+    if (little || kid.done.length < 6)
+      await say(canListen ? 'Appuie sur le gros micro, et réponds en français !' : 'Dis ta réponse bien fort, en français !', 'buddy')
     if (alive.current) setPhase('ready')
   }
 
@@ -90,6 +95,7 @@ export function GameScreen({
     await say(P(a.cheer))
     await say(`Bravo ${kid.name} ! Tu as gagné un autocollant !`, 'buddy')
     if (!wasComplete && nowComplete) await say(`Et le badge ${place.badge.name} ! Waouh !`, 'buddy')
+    await say(nextId ? 'Touche « Encore » pour jouer encore, ou la maison pour revenir !' : 'Touche le bouton pour retourner sur la carte !', 'buddy')
   }
 
   const onMic = async () => {
@@ -106,8 +112,8 @@ export function GameScreen({
     setTries(n)
     sfx.oops()
     setPhase('miss')
-    if (results.length === 0) await say('Je n’ai rien entendu… Parle bien fort, comme un lion !')
-    else if (n === 1) await say(`Presque ! Essaie encore. ${a.hint ? P(a.hint) : P(a.ask)}`)
+    if (results.length === 0) await say('Je n’ai rien entendu… Appuie sur le micro et parle bien fort, comme un lion !')
+    else if (n === 1) await say(`Presque ! Essaie encore. ${a.hint ? P(a.hint) : P(a.ask)} Appuie sur le micro !`)
     else await say(`Tu y es presque ! ${a.hint ? P(a.hint) : ''} ${family.parent} peut t’aider !`)
     if (alive.current) setPhase('ready')
   }
@@ -132,7 +138,7 @@ export function GameScreen({
       <div className="game">
         <div className="game-cast">
           <Friend id={place.friend} size={friendSize} talking={speaker === 'friend' && phase !== 'listening'} />
-          <Bubble who={speaker === 'friend' ? friend.name : buddy.name} text={line} />
+          <Bubble who={speaker === 'friend' ? friend.name : buddy.name} text={line} voice={speaker === 'friend' ? friend.voice : buddy.voice} />
           <Buddy id={kid.buddy} size={buddySize} outfit={kid.outfit} talking={speaker === 'buddy'} />
         </div>
 

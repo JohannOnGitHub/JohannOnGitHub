@@ -9,6 +9,16 @@ import { sfx } from '../lib/sfx'
 import { fit, useScreen } from '../lib/useScreen'
 
 export function BonusMenu({ kid, onBack, onPlay }: { kid: Kid; onBack: () => void; onPlay: (g: BonusGame['id']) => void }) {
+  useEffect(() => {
+    const open = BONUS_GAMES.filter((g) => kid.stars >= g.stars).length
+    void speak(
+      open
+        ? 'Choisis un jeu ! Touche une image. Les jeux avec un cadenas s’ouvriront quand tu auras plus d’étoiles.'
+        : 'Les jeux bonus sont encore fermés ! Gagne des étoiles sur la carte pour les ouvrir.',
+      BUDDIES[kid.buddy].voice,
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   return (
     <div className="screen">
       <Scene place="provence" />
@@ -58,7 +68,7 @@ export function Bulles({ kid, onBack }: { kid: Kid; onBack: () => void }) {
   const nid = useRef(0)
 
   useEffect(() => {
-    void speak('Éclate les bulles de savon de Marseille ! Pop !', BUDDIES[kid.buddy].voice)
+    void speak('Touche les bulles de savon pour les éclater ! Pop ! Chaque bulle te dit un mot.', BUDDIES[kid.buddy].voice)
     const t = setInterval(() => {
       const w = pool[Math.floor(Math.random() * pool.length)]
       const b: B = { id: nid.current++, x: 5 + Math.random() * 80, dur: 6 + Math.random() * 4, ...w }
@@ -119,7 +129,7 @@ export function Atelier({ kid, onBack }: { kid: Kid; onBack: () => void }) {
       <div className="atelier">
         <div className="atelier-stage">
           <Buddy id={kid.buddy} size={scr.portrait ? fit(scr, 0.45, 160, 320) : 260} outfit={kid.outfit} />
-          <Bubble who={buddy.name} text={line} />
+          <Bubble who={buddy.name} text={line} voice={buddy.voice} />
         </div>
         <div className="wardrobe">
           {PLACES.map((p) => {
@@ -175,7 +185,12 @@ export function Virages({ kid, onBack }: { kid: Kid; onBack: () => void }) {
   const buddy = BUDDIES[kid.buddy]
 
   useEffect(() => {
-    void speak('Vingt et un virages pour monter à l’Alpe d’Huez ! Crie : allez ! ou vroum ! pour faire avancer le camion !', buddy.voice)
+    void speak(
+      canListen
+        ? 'Vingt et un virages pour monter à l’Alpe d’Huez ! Appuie sur le micro et crie : allez ! Ou touche le bouton vroum !'
+        : 'Vingt et un virages pour monter à l’Alpe d’Huez ! Touche le bouton vroum pour faire avancer le camion !',
+      buddy.voice,
+    )
   }, [buddy.voice])
 
   const advance = (n: number) => {
@@ -244,7 +259,7 @@ export function Virages({ kid, onBack }: { kid: Kid; onBack: () => void }) {
         </div>
         {won && <Confetti />}
         <div className="virages-controls">
-          <Bubble who={buddy.name} text={won ? 'On est en haut ! Champion !' : msg} />
+          <Bubble who={buddy.name} text={won ? 'On est en haut ! Champion !' : msg} voice={buddy.voice} />
           {won ? (
             <button className="big-btn go" onClick={() => setBend(0)}>
               🔁 Encore une course !
