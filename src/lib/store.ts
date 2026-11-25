@@ -23,7 +23,7 @@ export type Family = {
   papi: string // grandparent from Rennes
   unlockAll: boolean
   /** ElevenLabs voices picked in the parents' corner, per role. */
-  voices?: Partial<Record<'boy' | 'girl' | 'woman' | 'man', { id: string; name: string }>>
+  voices?: Partial<Record<'boy' | 'girl' | 'woman' | 'man' | 'korri', { id: string; name: string }>>
 }
 
 export type State = { kids: Kid[]; family: Family; currentKid: string | null }

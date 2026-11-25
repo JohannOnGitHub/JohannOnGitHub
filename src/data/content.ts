@@ -43,7 +43,7 @@ export const FRIENDS: Record<FriendId, { name: string; what: string; voice: Voic
   gaspard: { name: 'Gaspard', what: 'le chamois', voice: { id: 'man' } },
   cigalou: { name: 'Cigalou', what: 'la cigale', voice: { id: 'woman' } },
   gaby: { name: 'Gaby', what: 'la mouette', voice: { id: 'woman' } },
-  korri: { name: 'Korri', what: 'le korrigan', voice: { id: 'man' } },
+  korri: { name: 'Korri', what: 'le korrigan', voice: { id: 'korri' } },
 }
 
 export const BUDDIES: Record<BuddyId, { name: string; title: string; voice: VoiceStyle; blurb: string }> = {

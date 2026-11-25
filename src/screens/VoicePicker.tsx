@@ -6,7 +6,7 @@ const ROLES: { id: VoiceId; label: string; gender: 'male' | 'female'; sample: st
   { id: 'boy', label: '🐶 Rocco — voix de garçon (pour Mathis)', gender: 'male', sample: 'Coucou ! C’est moi, Rocco ! On part à l’aventure dans les montagnes ?', q: 'garçon' },
   { id: 'girl', label: '❄️ Givrine — voix de fille (pour Céline)', gender: 'female', sample: 'Coucou ! C’est moi, Givrine, la princesse des neiges ! Tu viens jouer ?', q: 'fille' },
   { id: 'woman', label: '🐿️ Pépette, Cigalou, Gaby — voix de femme', gender: 'female', sample: 'Bienvenue à l’Alpe d’Huez ! Moi, c’est Pépette la marmotte. On joue ?', q: '' },
-  { id: 'man', label: '🧚 Gaspard, Korri — voix d’homme', gender: 'male', sample: 'Degemer mat ! Je suis Korri le korrigan. Bienvenue en Bretagne !', q: '' },
+  { id: 'man', label: '🦌 Gaspard — voix d’homme', gender: 'male', sample: 'Degemer mat ! Je suis Korri le korrigan. Bienvenue en Bretagne !', q: '' },
 ]
 
 type LibVoice = { id: string; owner: string; name: string; info: string; description: string; preview?: string }
