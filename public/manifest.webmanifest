@@ -1,0 +1,10 @@
+{
+  "name": "Les Aventures de Pépette",
+  "short_name": "Pépette",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#dff3ff",
+  "theme_color": "#5aa9e6",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
