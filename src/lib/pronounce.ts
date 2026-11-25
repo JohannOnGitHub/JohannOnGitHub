@@ -37,3 +37,18 @@ export function voiceKey(role: string, text: string): string {
   }
   return (h >>> 0).toString(36)
 }
+
+let kidNames: string[] = []
+export function setKidNames(names: string[]) {
+  kidNames = names.filter((n) => n.trim())
+}
+
+/** The same line without the child's name (pre-recorded voices never contain names). */
+export function stripName(text: string, names: string[] = kidNames): string {
+  let t = text
+  for (const n of names) {
+    const esc = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    t = t.replace(new RegExp(`\\s*,?\\s*(?<![\\p{L}])${esc}(?![\\p{L}])`, 'gu'), '')
+  }
+  return t.replace(/\s+([!?.,])/g, ' $1').replace(/\s+/g, ' ').trim()
+}

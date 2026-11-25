@@ -1,6 +1,6 @@
 import { music } from './music'
 import { ac } from './sfx'
-import { spoken, voiceKey } from './pronounce'
+import { spoken, stripName, voiceKey } from './pronounce'
 
 // Voice engine:
 // - Speaking: natural ElevenLabs voices through our /api/tts function (cached),
@@ -90,7 +90,7 @@ const packsReady: Promise<void> =
           packs = {}
         })
 
-function fetchVoice(text: string, id: VoiceId): Promise<AudioBuffer | null> {
+function fetchVoice(text: string, id: VoiceId, alt?: string): Promise<AudioBuffer | null> {
   const vid = chosen[id] ?? ''
   const key = `${vid || id}|${text}`
   let p = cache.get(key)
@@ -99,8 +99,8 @@ function fetchVoice(text: string, id: VoiceId): Promise<AudioBuffer | null> {
       const c = ac()
       if (!c) return null
       await packsReady
-      const k = voiceKey(id, text)
-      if (packs?.[id]?.[k]) {
+      const k = [voiceKey(id, text), alt && voiceKey(id, alt)].find((x) => x && packs?.[id]?.[x])
+      if (k) {
         try {
           const r = await fetch(`/voices/${id}/${k}.mp3`)
           if (r.ok) return await c.decodeAudioData(await r.arrayBuffer())
@@ -221,7 +221,7 @@ export async function speak(text: string, style: VoiceStyle = { id: 'woman' }): 
   const token = ++speakToken
   music.duck(0.3)
   try {
-    const b = await fetchVoice(t, style.id)
+    const b = await fetchVoice(t, style.id, spoken(stripName(text)))
     if (token !== speakToken) return // something else started talking meanwhile
     if (b) await playBuffer(b, style.rate ?? 1)
     else await speakDevice(t, style)

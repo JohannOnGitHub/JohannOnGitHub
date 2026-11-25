@@ -5,6 +5,7 @@ import { Pic } from '../components/Characters'
 import { placeProgress, type Kid } from '../lib/store'
 import { speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { BUDDY } from '../data/lines'
 
 export function Album({ kid, onBack }: { kid: Kid; onBack: () => void }) {
   const [tab, setTab] = useState<'stickers' | 'trophies'>('stickers')
@@ -13,9 +14,9 @@ export function Album({ kid, onBack }: { kid: Kid; onBack: () => void }) {
     void speak(
       tab === 'stickers'
         ? kid.done.length
-          ? `Voici ton album, ${kid.name} ! Tu as ${kid.done.length} autocollants. Touche un autocollant pour l’écouter !`
-          : 'Voici ton album ! Il est encore vide. Joue sur la carte pour gagner des autocollants !'
-        : 'Voici tes trophées ! Les trophées en couleur, tu les as gagnés !',
+          ? BUDDY.album(kid.name)
+          : BUDDY.albumEmpty
+        : BUDDY.trophies,
       voice,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -47,7 +48,7 @@ export function Album({ kid, onBack }: { kid: Kid; onBack: () => void }) {
                       onClick={() => {
                         if (!got) return
                         sfx.pop()
-                        void speak(a.sticker.name)
+                        void speak(a.sticker.name, voice)
                       }}
                     >
                       <span>{got ? <Pic v={a.sticker.emoji} /> : '❔'}</span>

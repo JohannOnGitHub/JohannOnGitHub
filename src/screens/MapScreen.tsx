@@ -6,6 +6,7 @@ import { Bubble, TopBar } from '../components/ui'
 import { isPlaceOpen, placeProgress, useStore, type Kid } from '../lib/store'
 import { speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { BUDDY } from '../data/lines'
 import { fit, useScreen } from '../lib/useScreen'
 
 export function MapScreen({
@@ -26,8 +27,8 @@ export function MapScreen({
   const scr = useScreen()
   const line =
     kid.done.length === 0
-      ? `Coucou ${kid.name} ! Voici la carte de France. Touche les montagnes pour commencer l’aventure !`
-      : `Coucou ${kid.name} ! Où est-ce qu’on va aujourd’hui ? Touche un endroit sur la carte !`
+      ? BUDDY.mapFirst(kid.name)
+      : BUDDY.mapAgain(kid.name)
   useEffect(() => {
     void speak(line, buddy.voice)
   }, [line, buddy.voice])
@@ -50,7 +51,7 @@ export function MapScreen({
                 onClick={() => {
                   if (!open) {
                     sfx.oops()
-                    void speak(`C’est encore fermé ! Joue d’abord à ${PLACES[i - 1].short}.`, buddy.voice)
+                    void speak(BUDDY.mapLocked(PLACES[i - 1].short), buddy.voice)
                     return
                   }
                   sfx.tap()

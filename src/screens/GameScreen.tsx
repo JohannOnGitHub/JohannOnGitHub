@@ -6,11 +6,10 @@ import { Bubble, Confetti, HoldButton, TopBar } from '../components/ui'
 import { personalize, placeProgress, recordSuccess, useStore, type Kid } from '../lib/store'
 import { canListen, listen, preload, scoreAnswer, speak, stopListening, stopSpeaking, thresholdForAge } from '../lib/speech'
 import { sfx } from '../lib/sfx'
-import { effortLine, missLine as missLineFor } from '../data/lines'
+import { BUDDY, NUM_WORDS, effortLine, missLine as missLineFor } from '../data/lines'
 import { fit, useScreen } from '../lib/useScreen'
 
 type Phase = 'telling' | 'ready' | 'listening' | 'success' | 'miss'
-const NUM_WORDS = ['un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix']
 
 export function GameScreen({
   kid,
@@ -67,16 +66,16 @@ export function GameScreen({
       [P(a.ask), 'friend'],
     ]
     if (little && a.hint) l.push([P(a.hint), 'friend'])
-    if (a.kind === 'count') l.push(['Touche-les pour compter avec moi !', 'buddy'])
-    if (a.kind === 'choose') l.push(['Touche les images pour entendre les mots !', 'buddy'])
+    if (a.kind === 'count') l.push([BUDDY.count, 'buddy'])
+    if (a.kind === 'choose') l.push([BUDDY.choose, 'buddy'])
     // Explain the microphone to the little ones every time, to the bigger ones for their first games.
     if (little || kid.done.length < 6)
-      l.push([canListen ? 'Appuie sur le gros micro, et réponds en français !' : 'Dis ta réponse bien fort, en français !', 'buddy'])
+      l.push([canListen ? BUDDY.mic : BUDDY.noMic, 'buddy'])
     return l
   }
 
   const missLine = (n: number) => missLineFor(a, family, n, little)
-  const NOTHING = 'Je n’ai rien entendu. Appuie sur le micro, et parle bien fort !'
+  const NOTHING = BUDDY.nothing
 
   const intro = async () => {
     const my = ++run.current
@@ -90,7 +89,7 @@ export function GameScreen({
     // Get the feedback lines ready so the answer comes back instantly.
     preload([
       [P(a.cheer), friend.voice],
-      [`Bravo ${kid.name} ! Tu as gagné un autocollant !`, buddy.voice],
+      [BUDDY.bravo(kid.name), buddy.voice],
       [missLine(1), friend.voice],
       [missLine(2), friend.voice],
       [NOTHING, buddy.voice],
@@ -128,14 +127,14 @@ export function GameScreen({
     const lines: [string, 'friend' | 'buddy'][] = effort
       ? [
           [effortLine(a, family), 'friend'],
-          [`Tu as gagné un autocollant, ${kid.name} !`, 'buddy'],
+          [BUDDY.effortWin(kid.name), 'buddy'],
         ]
       : [
           [P(a.cheer), 'friend'],
-          [`Bravo ${kid.name} ! Tu as gagné un autocollant !`, 'buddy'],
+          [BUDDY.bravo(kid.name), 'buddy'],
         ]
-    if (!wasComplete && nowComplete) lines.push([`Et le badge ${place.badge.name} ! Waouh !`, 'buddy'])
-    lines.push([nextId ? 'Touche « Encore » pour jouer encore, ou la maison pour revenir !' : 'Touche le bouton pour retourner sur la carte !', 'buddy'])
+    if (!wasComplete && nowComplete) lines.push([BUDDY.badge(place.badge.name), 'buddy'])
+    lines.push([nextId ? BUDDY.nextMore : BUDDY.nextMap, 'buddy'])
     for (const [t, w] of lines) if (!(await say(t, w, my))) return
   }
 
@@ -159,7 +158,7 @@ export function GameScreen({
     if (res.matched) return void succeed()
     if (res.error === 'not-allowed') {
       setPhase('miss')
-      await say(`Le micro n’est pas autorisé. ${family.parent}, il faut autoriser le micro pour Safari dans les réglages.`, 'buddy', my)
+      await say(BUDDY.micDenied(family.parent), 'buddy', my)
       if (my === run.current) setPhase('ready')
       return
     }

@@ -6,6 +6,7 @@ import { Bubble, Confetti, TopBar } from '../components/ui'
 import { addStars, badgesOf, updateKid, type Kid } from '../lib/store'
 import { canListen, listen, speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { BUDDY } from '../data/lines'
 import { fit, useScreen } from '../lib/useScreen'
 
 export function BonusMenu({ kid, onBack, onPlay }: { kid: Kid; onBack: () => void; onPlay: (g: BonusGame['id']) => void }) {
@@ -13,8 +14,8 @@ export function BonusMenu({ kid, onBack, onPlay }: { kid: Kid; onBack: () => voi
     const open = BONUS_GAMES.filter((g) => kid.stars >= g.stars).length
     void speak(
       open
-        ? 'Choisis un jeu ! Touche une image. Les jeux avec un cadenas s’ouvriront quand tu auras plus d’étoiles.'
-        : 'Les jeux bonus sont encore fermés ! Gagne des étoiles sur la carte pour les ouvrir.',
+        ? BUDDY.bonus
+        : BUDDY.bonusClosed,
       BUDDIES[kid.buddy].voice,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -33,7 +34,7 @@ export function BonusMenu({ kid, onBack, onPlay }: { kid: Kid; onBack: () => voi
               onClick={() => {
                 if (!open) {
                   sfx.oops()
-                  void speak(`Il te faut ${g.stars} étoiles pour ouvrir ce jeu ! Tu en as ${kid.stars}.`, BUDDIES[kid.buddy].voice)
+                  void speak(BUDDY.bonusLocked, BUDDIES[kid.buddy].voice)
                   return
                 }
                 sfx.tap()
@@ -68,7 +69,7 @@ export function Bulles({ kid, onBack }: { kid: Kid; onBack: () => void }) {
   const nid = useRef(0)
 
   useEffect(() => {
-    void speak('Touche les bulles de savon pour les éclater ! Pop ! Chaque bulle te dit un mot.', BUDDIES[kid.buddy].voice)
+    void speak(BUDDY.bulles, BUDDIES[kid.buddy].voice)
     const t = setInterval(() => {
       const w = pool[Math.floor(Math.random() * pool.length)]
       const b: B = { id: nid.current++, x: 5 + Math.random() * 80, dur: 6 + Math.random() * 4, ...w }
@@ -99,7 +100,7 @@ export function Bulles({ kid, onBack }: { kid: Kid; onBack: () => void }) {
               sfx.pop()
               setScore((s) => s + 1)
               setBubbles((bs) => bs.map((x) => (x.id === b.id ? { ...x, popped: true } : x)))
-              void speak(b.word)
+              void speak(b.word, BUDDIES[kid.buddy].voice)
             }}
           >
             <Pic v={b.emoji} />
@@ -119,7 +120,7 @@ export function Atelier({ kid, onBack }: { kid: Kid; onBack: () => void }) {
   const [line, setLine] = useState('Choisis un trésor et je le mets !')
   const scr = useScreen()
   useEffect(() => {
-    void speak('Bienvenue dans l’atelier ! Choisis un trésor et je le mets !', buddy.voice)
+    void speak(BUDDY.atelier, buddy.voice)
   }, [buddy.voice])
 
   return (
@@ -146,14 +147,14 @@ export function Atelier({ kid, onBack }: { kid: Kid; onBack: () => void }) {
                       onClick={() => {
                         if (!open) {
                           sfx.oops()
-                          const t = `Pour l’avoir, finis tous les jeux de ${p.short} !`
+                          const t = BUDDY.atelierLocked(p.short)
                           setLine(t)
                           void speak(t, buddy.voice)
                           return
                         }
                         sfx.pop()
                         updateKid(kid.id, (k) => ({ outfit: { ...k.outfit, [w.slot]: on ? undefined : w.id } }))
-                        const t = on ? `J’enlève ${w.name}.` : `Je mets ${w.name} ! Je suis trop beau !`.replace('beau', kid.buddy === 'givrine' ? 'belle' : 'beau')
+                        const t = on ? BUDDY.unwear(w.name) : BUDDY.wear(w.name, kid.buddy === 'givrine')
                         setLine(t)
                         void speak(t, buddy.voice)
                       }}
@@ -187,8 +188,8 @@ export function Virages({ kid, onBack }: { kid: Kid; onBack: () => void }) {
   useEffect(() => {
     void speak(
       canListen
-        ? 'Vingt et un virages pour monter à l’Alpe d’Huez ! Appuie sur le micro et crie : allez ! Ou touche le bouton vroum !'
-        : 'Vingt et un virages pour monter à l’Alpe d’Huez ! Touche le bouton vroum pour faire avancer le camion !',
+        ? BUDDY.virages
+        : BUDDY.viragesNoMic,
       buddy.voice,
     )
   }, [buddy.voice])
@@ -201,10 +202,10 @@ export function Virages({ kid, onBack }: { kid: Kid; onBack: () => void }) {
     if (nb >= BENDS) {
       sfx.win()
       addStars(kid.id, 3)
-      void speak('On est en haut ! Bravo, tu es un champion du Tour de France ! Plus trois étoiles !', buddy.voice)
+      void speak(BUDDY.viragesWin, buddy.voice)
     } else {
       const remaining = BENDS - nb
-      void speak(remaining <= 10 ? `Encore ${remaining} !` : 'Vroum !', buddy.voice)
+      void speak(remaining <= 10 ? BUDDY.viragesLeft(remaining) : BUDDY.vroum, buddy.voice)
     }
   }
 

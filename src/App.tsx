@@ -3,7 +3,7 @@ import { ACHIEVEMENTS, type BonusGame, type PlaceId } from './data/content'
 import { selectKid, useStore } from './lib/store'
 import { initSync } from './lib/sync'
 import { setVoiceIds, stopListening, stopSpeaking } from './lib/speech'
-import { setPronunciations } from './lib/pronounce'
+import { setKidNames, setPronunciations } from './lib/pronounce'
 import { sfx } from './lib/sfx'
 import { music, type TuneId } from './lib/music'
 import { Splash } from './screens/Splash'
@@ -27,6 +27,7 @@ type Route =
 
 export default function App() {
   const { kids, currentKid, family } = useStore()
+  setKidNames(kids.map((k) => k.name))
   setPronunciations(Object.fromEntries(kids.filter((k) => k.spoken).map((k) => [k.name, k.spoken!])))
   setVoiceIds(Object.fromEntries(Object.entries(family.voices ?? {}).map(([k, v]) => [k, v?.id ?? ''])))
   const kid = kids.find((k) => k.id === currentKid) ?? null
