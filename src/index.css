@@ -1813,3 +1813,8 @@ select:focus {
 .voice-msg {
   font-weight: 700;
 }
+.spoken-input {
+  font-size: 16px;
+  padding: 6px 10px;
+  width: 170px;
+}

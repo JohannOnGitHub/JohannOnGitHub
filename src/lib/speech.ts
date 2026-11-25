@@ -1,5 +1,6 @@
 import { music } from './music'
 import { ac } from './sfx'
+import { spoken, voiceKey } from './pronounce'
 
 // Voice engine:
 // - Speaking: natural ElevenLabs voices through our /api/tts function (cached),
@@ -72,9 +73,22 @@ const cache = new Map<string, Promise<AudioBuffer | null>>()
 const noVoice = new Set<VoiceId>()
 let current: { stop: () => void } | null = null
 
-function clean(text: string) {
-  return text.replace(/[«»]/g, '').replace(/\s+/g, ' ').trim()
-}
+const clean = spoken
+
+// Pre-recorded voices shipped with the app (public/voices), generated for free
+// with Piper by scripts/gen-voices.sh. Checked before any online voice.
+let packs: Record<string, Record<string, 1>> | null = null
+const packsReady: Promise<void> =
+  typeof window === 'undefined'
+    ? Promise.resolve()
+    : fetch('/voices/manifest.json')
+        .then((r) => (r.ok ? r.json() : {}))
+        .then((m) => {
+          packs = m as Record<string, Record<string, 1>>
+        })
+        .catch(() => {
+          packs = {}
+        })
 
 function fetchVoice(text: string, id: VoiceId): Promise<AudioBuffer | null> {
   const vid = chosen[id] ?? ''
@@ -82,9 +96,19 @@ function fetchVoice(text: string, id: VoiceId): Promise<AudioBuffer | null> {
   let p = cache.get(key)
   if (!p) {
     p = (async () => {
-      if (cloud === 'off' || (!vid && noVoice.has(id))) return null
       const c = ac()
       if (!c) return null
+      await packsReady
+      const k = voiceKey(id, text)
+      if (packs?.[id]?.[k]) {
+        try {
+          const r = await fetch(`/voices/${id}/${k}.mp3`)
+          if (r.ok) return await c.decodeAudioData(await r.arrayBuffer())
+        } catch {
+          /* fall through */
+        }
+      }
+      if (cloud === 'off' || (!vid && noVoice.has(id))) return null
       try {
         const r = await fetch(`/api/tts?v=${id}${vid ? `&id=${vid}` : ''}&t=${encodeURIComponent(text)}`)
         if (r.status === 503 || r.status === 404) {

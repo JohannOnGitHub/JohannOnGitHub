@@ -6,6 +6,7 @@ import { Bubble, Confetti, HoldButton, TopBar } from '../components/ui'
 import { personalize, placeProgress, recordSuccess, useStore, type Kid } from '../lib/store'
 import { canListen, listen, preload, scoreAnswer, speak, stopListening, stopSpeaking, thresholdForAge } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { effortLine, missLine as missLineFor } from '../data/lines'
 import { fit, useScreen } from '../lib/useScreen'
 
 type Phase = 'telling' | 'ready' | 'listening' | 'success' | 'miss'
@@ -74,8 +75,7 @@ export function GameScreen({
     return l
   }
 
-  const missLine = (n: number) =>
-    n === 1 ? (little && a.hint ? `Presque ! ${P(a.hint)}` : 'Presque ! Essaie encore !') : a.hint ? `Essaie encore ! ${P(a.hint)}` : `Essaie encore ! ${family.parent} peut t’aider !`
+  const missLine = (n: number) => missLineFor(a, family, n, little)
   const NOTHING = 'Je n’ai rien entendu. Appuie sur le micro, et parle bien fort !'
 
   const intro = async () => {
@@ -127,7 +127,7 @@ export function GameScreen({
     if (newly.length) onAchievements(newly)
     const lines: [string, 'friend' | 'buddy'][] = effort
       ? [
-          [`Bravo d’avoir essayé ! On dit : ${P(a.answers[0])} !`, 'friend'],
+          [effortLine(a, family), 'friend'],
           [`Tu as gagné un autocollant, ${kid.name} !`, 'buddy'],
         ]
       : [

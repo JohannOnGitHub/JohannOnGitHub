@@ -3,9 +3,10 @@ import { FRIENDS, PLACES, type PlaceId } from '../data/content'
 import { Buddy, Friend, Pic } from '../components/Characters'
 import { Scene } from '../components/Scenes'
 import { Bubble, TopBar } from '../components/ui'
-import { markVisited, personalize, placeProgress, useStore, type Kid } from '../lib/store'
+import { markVisited, placeProgress, useStore, type Kid } from '../lib/store'
 import { speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { placeWelcome } from '../data/lines'
 import { fit, useScreen } from '../lib/useScreen'
 
 export function PlaceScreen({
@@ -24,7 +25,7 @@ export function PlaceScreen({
   const { family } = useStore()
   const place = PLACES.find((p) => p.id === placeId)!
   const friend = FRIENDS[place.friend]
-  const welcome = personalize(place.welcome, family) + ' Touche une image pour jouer !'
+  const welcome = placeWelcome(place, family)
   const [talking, setTalking] = useState(true)
   const prog = placeProgress(kid, placeId)
   const scr = useScreen()

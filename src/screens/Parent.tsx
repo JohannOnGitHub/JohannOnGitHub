@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { PLACES } from '../data/content'
 import { TopBar } from '../components/ui'
 import { removeKid, setFamily, updateKid, useStore } from '../lib/store'
-import { canListen, canSpeak } from '../lib/speech'
+import { canListen, canSpeak, speak } from '../lib/speech'
 import { VoicePicker } from './VoicePicker'
 import { onSession, sendCode, signOut, syncAvailable, verifyCode } from '../lib/sync'
 
@@ -83,6 +83,15 @@ export function Parent({ onBack }: { onBack: () => void }) {
                 <option value="rocco">Rocco</option>
                 <option value="givrine">Givrine</option>
               </select>
+              <input
+                className="spoken-input"
+                value={k.spoken ?? ''}
+                placeholder={`Se prononce… (ex. ${k.name === 'Mathis' ? 'Matisse' : k.name})`}
+                onChange={(e) => updateKid(k.id, { spoken: e.target.value })}
+              />
+              <button className="btn" onClick={() => void speak(`Bravo ${k.name} !`, { id: k.buddy === 'rocco' ? 'boy' : 'girl' })}>
+                🔊
+              </button>
               <span>
                 ⭐ {k.stars} · {k.done.length} jeux · {PLACES.filter((p) => p.activities.every((a) => k.done.includes(a.id))).length} badges
               </span>

@@ -13,6 +13,8 @@ export type Kid = {
   visited: PlaceId[]
   outfit: Record<string, string | undefined> // slot -> wearable id
   updatedAt: number
+  /** How the name is said, e.g. « Matisse » for Mathis. */
+  spoken?: string
 }
 
 export type Family = {

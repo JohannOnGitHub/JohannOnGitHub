@@ -9,7 +9,8 @@ const DEFAULTS: Record<string, string | undefined> = {
   woman: process.env.ELEVENLABS_VOICE_WOMAN,
   man: process.env.ELEVENLABS_VOICE_MAN,
 }
-const MODEL = process.env.ELEVENLABS_MODEL ?? 'eleven_multilingual_v2'
+// Flash v2.5 uses half the credits of Multilingual v2 (fits the free plan).
+const MODEL = process.env.ELEVENLABS_MODEL ?? 'eleven_flash_v2_5'
 const VOICE_ID = /^[A-Za-z0-9]{10,40}$/
 
 export async function GET(request: Request): Promise<Response> {
@@ -35,6 +36,7 @@ export async function GET(request: Request): Promise<Response> {
     body: JSON.stringify({
       text,
       model_id: MODEL,
+      ...(/flash|turbo/.test(MODEL) ? { language_code: 'fr' } : {}),
       voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.35, use_speaker_boost: true },
     }),
   })
