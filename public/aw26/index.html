@@ -717,7 +717,7 @@ function viewDay(r) {
       <button class="iconbtn ${editMode ? "on" : ""}" id="edit">${editMode ? "Done" : "Edit"}</button></div>
     ${head}
     ${day.guide && day.guide.length ? `<details class="card pad guide"><summary>Ski &amp; sports rules</summary><dl>${day.guide.map(([t, d]) => `<dt>${esc(t)}</dt><dd>${esc(d)}</dd>`).join("")}</dl></details>` : ""}
-    ${editMode ? `<p class="notes">Reorder with the arrows. Link two neighbouring exercises to do them as a superset. Tap an exercise to rename it, change sets or add alternatives. New exercises can come from your exercise database.</p>` : ""}
+    ${editMode ? `<p class="notes">Reorder with the arrows. Link two neighbouring exercises to do them as a superset. Tap an exercise and use ⇄ Swap to change it, or Edit to rename it, change sets or add alternatives. New exercises can come from your exercise database.</p>` : ""}
     ${secs}
   </div>${tabs("home")}`;
 }
@@ -744,7 +744,7 @@ function exPanel(day, ex, inRun) {
   const lib = libByName(v.name), prs = lib ? prTable(lib).slice(0, 6) : [];
   const rows = live ? liveSets(ex.id, v) : [];
   return `<article class="card panel" style="--dc:${META[day.id].color}">
-    <div class="row" style="align-items:flex-start"><div class="grow" style="display:flex;flex-direction:column;gap:4px;min-width:0">${ex.label ? `<span class="label cat">${esc(ex.label)}</span>` : ""}<h2>${esc(v.name)}</h2></div><button class="iconbtn" data-editex="${ex.id}">Edit</button></div>
+    <div class="row" style="align-items:flex-start"><div class="grow" style="display:flex;flex-direction:column;gap:4px;min-width:0">${ex.label ? `<span class="label cat">${esc(ex.label)}</span>` : ""}<h2>${esc(v.name)}</h2></div><div class="row" style="gap:6px;flex-wrap:nowrap"><button class="iconbtn" data-swap="${ex.id}">⇄ Swap</button><button class="iconbtn" data-editex="${ex.id}">Edit</button></div></div>
     ${variantChips}
     <div class="presc" style="align-items:center"><span class="big num grow">${esc(v.sets || "—")}</span>
       <span class="stepper" role="group" aria-label="Number of sets"><button data-step="${ex.id}" data-dir="-1" aria-label="One set fewer">−</button><span>${v.count || 1} set${(v.count || 1) === 1 ? "" : "s"}</span><button data-step="${ex.id}" data-dir="1" aria-label="One set more">+</button></span></div>
@@ -920,6 +920,33 @@ function addExerciseSheet(day, sec) {
   });
 }
 
+function swapSheet(day, ex) {
+  const v = cur(ex);
+  sheet(`<h3>Swap ${esc(v.name)}</h3>
+    <div class="field"><label for="swname">New exercise</label><input id="swname" list="swnames" placeholder="Pick from your database or type a new name" autocomplete="off"></div>
+    <datalist id="swnames">${[...S.lib].sort((a, b) => a.name.localeCompare(b.name)).filter(l => norm(l.name) !== norm(v.name)).map(l => `<option value="${esc(l.name)}"></option>`).join("")}</datalist>
+    <div class="row"><div class="field"><label for="swsets">Sets × reps</label><input id="swsets" value="${esc(v.sets)}"></div><div class="field"><label for="swlabel">Movement</label><input id="swlabel" value="${esc(ex.label || "")}"></div></div>
+    <button class="btn" id="swreplace">Replace ${esc(v.name)}</button>
+    <button class="btn ghost" id="swalt">Add as an alternative (keep ${esc(v.name)})</button>
+    <button class="btn ghost" data-close="1">Cancel</button>
+    <p class="muted" style="margin:0;font-size:.84rem">${esc(v.name)}'s PRs stay in your exercise database.</p>`, layer => {
+    const i = layer.querySelector("#swname"); i.focus();
+    const apply = mode => {
+      const raw = i.value.trim(); if (!raw) { i.focus(); toast("Pick or type an exercise"); return; }
+      const l = ensureLib(raw), name = l.name, sets = layer.querySelector("#swsets").value.trim() || v.sets;
+      const nv = V(name, sets);
+      const tr = targetReps(nv), best = (tr ? l.prs.filter(p => String(p.r) === tr).sort((a, b) => parseW(b.w).kg - parseW(a.w).kg)[0] : null) || [...l.prs].sort((a, b) => b.date.localeCompare(a.date))[0];
+      if (best) { nv.weight = best.w; nv.reps = best.r; nv.maxDate = best.date; } else nv.maxDate = "";
+      if (mode === "replace") ex.variants[ex.cur || 0] = nv; else { ex.variants.push(nv); ex.cur = ex.variants.length - 1; }
+      ex.label = layer.querySelector("#swlabel").value.trim();
+      if (S.active && S.active.sets) delete S.active.sets[ex.id];
+      save(); closeSheet(); render(); toast(mode === "replace" ? `Swapped to ${name}` : `${name} added as an alternative`);
+    };
+    layer.querySelector("#swreplace").onclick = () => apply("replace");
+    layer.querySelector("#swalt").onclick = () => apply("alt");
+  });
+}
+
 function viewBackup() {
   return `<div class="wrap">
     <div class="top"><span class="title">Backup &amp; settings</span></div>
@@ -1034,7 +1061,7 @@ document.addEventListener("input", e => {
     document.querySelectorAll("#liblist [data-name]").forEach(b => { b.hidden = q && !b.dataset.name.includes(q); });
   }
 });
-document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest && e.target.closest(".sheet") && e.target.tagName === "INPUT") { const b = e.target.closest(".sheet").querySelector("#addgo, #nlgo, #rngo"); if (b) b.click(); } });
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest && e.target.closest(".sheet") && e.target.tagName === "INPUT") { const b = e.target.closest(".sheet").querySelector("#addgo, #nlgo, #rngo, #swreplace"); if (b) b.click(); } });
 
 document.addEventListener("click", e => {
   const t = e.target.closest("button, a"); if (!t || t.tagName === "A") return;
@@ -1071,6 +1098,7 @@ document.addEventListener("click", e => {
   }
   if (d.var && day) { const f = findEx(day, d.var); f.ex.cur = +d.i; save(); render(); return; }
   if (d.editex) { exEdit = d.editex; render(); return; }
+  if (d.swap && day) { swapSheet(day, findEx(day, d.swap).ex); return; }
   if (d.cancel) { exEdit = null; render(); return; }
   if (d.save && day) {
     const f = findEx(day, d.save), v = cur(f.ex), val = id => document.getElementById(id + "-" + f.ex.id).value;
