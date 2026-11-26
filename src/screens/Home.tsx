@@ -6,9 +6,10 @@ import { Bubble, HoldButton, MusicButton } from '../components/ui'
 import { addKid, selectKid, setFamily, useStore } from '../lib/store'
 import { speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
+import { PEPETTE_HOME } from '../data/lines'
 import { fit, useScreen } from '../lib/useScreen'
 
-const HOME_LINE = 'Coucou ! Qui vient jouer aujourd’hui ? Touche ton image pour commencer !'
+const HOME_LINE = PEPETTE_HOME
 const PEPETTE_VOICE = FRIENDS.pepette.voice
 
 export function Home({ onPlay, onParent }: { onPlay: () => void; onParent: () => void }) {

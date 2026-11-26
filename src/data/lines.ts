@@ -32,6 +32,10 @@ export function friendLines(p: Place, f: Fam): string[] {
 // Names are passed in; pre-recorded voices are made without the name
 // (see stripName in lib/pronounce.ts), so no first name ends up in public files.
 
+/** Pépette on the welcome screens. */
+export const PEPETTE_HOME = 'Coucou ! Qui vient jouer aujourd’hui ? Touche ton image pour commencer !'
+export const PEPETTE_SPLASH = 'Bonjour ! Touche le gros bouton pour jouer avec moi !'
+
 export const NUM_WORDS = ['un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix']
 
 export const BUDDY = {

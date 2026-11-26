@@ -5,6 +5,8 @@ import { fit, useScreen } from '../lib/useScreen'
 import { music } from '../lib/music'
 import { ac } from '../lib/sfx'
 import { speak } from '../lib/speech'
+import { PEPETTE_SPLASH } from '../data/lines'
+import { FRIENDS } from '../data/content'
 
 /**
  * First screen. Where the browser allows it (Android, computers) the music and
@@ -19,7 +21,7 @@ export function Splash({ onStart }: { onStart: () => void }) {
     const t = setTimeout(() => {
       if (c?.state === 'running') {
         music.unlock()
-        void speak('Bonjour ! Touche le gros bouton pour jouer avec moi !', { id: 'woman' })
+        void speak(PEPETTE_SPLASH, FRIENDS.pepette.voice)
       }
     }, 400)
     return () => clearTimeout(t)

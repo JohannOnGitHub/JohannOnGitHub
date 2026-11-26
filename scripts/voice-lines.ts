@@ -1,7 +1,7 @@
 // Lists every line to pre-record for a voice role, as JSON for the generators.
 // Usage: npx tsx scripts/voice-lines.ts <boy|girl|korri|...> > lines.json
 import { BUDDIES, FRIENDS, PLACES, WEARABLES } from '../src/data/content'
-import { buddyLines, friendLines } from '../src/data/lines'
+import { PEPETTE_HOME, PEPETTE_SPLASH, buddyLines, friendLines } from '../src/data/lines'
 import { spoken, stripName, voiceKey } from '../src/lib/pronounce'
 
 const role = process.argv[2] ?? 'korri'
@@ -10,6 +10,7 @@ const family = { parent: 'Papa', mamie: 'Chacha', papi: 'Papy' }
 
 const raw: string[] = []
 for (const p of PLACES) if (FRIENDS[p.friend].voice.id === role) raw.push(...friendLines(p, family))
+if (role === 'pepette') raw.push(PEPETTE_HOME, PEPETTE_SPLASH)
 for (const b of Object.values(BUDDIES)) {
   if (b.voice.id !== role) continue
   const girl = role === 'girl'

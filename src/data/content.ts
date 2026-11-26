@@ -39,10 +39,10 @@ export type Place = {
 }
 
 export const FRIENDS: Record<FriendId, { name: string; what: string; voice: VoiceStyle }> = {
-  pepette: { name: 'Pépette', what: 'la marmotte', voice: { id: 'woman' } },
-  gaspard: { name: 'Gaspard', what: 'le chamois', voice: { id: 'man' } },
-  cigalou: { name: 'Cigalou', what: 'la cigale', voice: { id: 'woman' } },
-  gaby: { name: 'Gaby', what: 'la mouette', voice: { id: 'woman' } },
+  pepette: { name: 'Pépette', what: 'la marmotte', voice: { id: 'pepette' } },
+  gaspard: { name: 'Gaspard', what: 'le chamois', voice: { id: 'gaspard' } },
+  cigalou: { name: 'Cigalou', what: 'la cigale', voice: { id: 'cigalou' } },
+  gaby: { name: 'Gaby', what: 'la mouette', voice: { id: 'gaby' } },
   korri: { name: 'Korri', what: 'le korrigan', voice: { id: 'korri' } },
 }
 

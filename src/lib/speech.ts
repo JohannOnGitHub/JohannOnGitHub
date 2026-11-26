@@ -34,7 +34,7 @@ export const canSpeak = typeof window !== 'undefined' && 'speechSynthesis' in wi
 // ---------- Voices ----------
 
 /** Which natural voice a character uses. */
-export type VoiceId = 'boy' | 'girl' | 'woman' | 'man' | 'korri'
+export type VoiceId = 'boy' | 'girl' | 'woman' | 'man' | 'korri' | 'pepette' | 'gaspard' | 'cigalou' | 'gaby'
 export type VoiceStyle = { id: VoiceId; rate?: number }
 
 // Device fallback: pick a male or a female French voice, no robotic pitch tricks.
@@ -55,7 +55,7 @@ if (canSpeak) {
   speechSynthesis.onvoiceschanged = loadDeviceVoices
 }
 function deviceVoiceFor(id: VoiceId) {
-  const wantMale = id === 'boy' || id === 'man' || id === 'korri'
+  const wantMale = id === 'boy' || id === 'man' || id === 'korri' || id === 'gaspard'
   return deviceVoices.find((v) => (wantMale ? MALE : FEMALE).test(v.name)) ?? deviceVoices[0] ?? null
 }
 
