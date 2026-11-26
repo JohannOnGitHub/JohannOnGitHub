@@ -7,6 +7,10 @@
       "destination": "/workout/index.html"
     },
     {
+      "source": "/aw26",
+      "destination": "/aw26/index.html"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
