@@ -847,6 +847,7 @@ function exPanel(day, ex, inRun) {
       <div class="row"><div class="field"><label for="f-sets-${ex.id}">Sets × reps</label><input id="f-sets-${ex.id}" value="${esc(v.sets)}" placeholder="3×10"></div>
         <div class="field" style="max-width:130px"><label for="f-mode-${ex.id}">Logged as</label><select id="f-mode-${ex.id}"><option value="reps" ${isTime(v) ? "" : "selected"}>Weight × reps</option><option value="time" ${isTime(v) ? "selected" : ""}>Time</option></select></div>
         <div class="field" style="max-width:110px"><label for="f-count-${ex.id}">Number of sets</label><input id="f-count-${ex.id}" type="number" min="1" max="12" inputmode="numeric" value="${esc(v.count || 1)}"></div></div>
+      <div class="row">${wInput("f-mw-" + ex.id, v.weight, "Working max weight")}<div class="field" style="max-width:120px"><label for="f-mr-${ex.id}">${isTime(v) ? "Time" : "Reps"}</label><input id="f-mr-${ex.id}" value="${esc(v.reps)}" placeholder="${isTime(v) ? "1:30" : "reps"}"></div></div>
       <div class="field"><label for="f-notes-${ex.id}">Notes and cues</label><textarea id="f-notes-${ex.id}">${esc(v.notes)}</textarea></div>
       <div class="row"><button class="btn grow" data-save="${ex.id}">Save</button><button class="btn ghost" data-cancel="1">Cancel</button></div>
       <div class="row"><button class="btn ghost small" data-addvar="${ex.id}">+ Add alternative exercise</button>
@@ -866,12 +867,8 @@ function exPanel(day, ex, inRun) {
     <div class="maxbox">
       <span class="label">Working max</span>
       <div class="val">${mt ? esc(mt) : "Not set yet"}</div>
-      ${v.maxDate ? `<span class="hist">Since ${esc(fmtDate(v.maxDate, { day: "numeric", month: "short", year: "numeric" }))}</span>` : ""}
-      <div class="row">
-        ${wInput("mw-" + ex.id, v.weight, "Weight (kg)")}
-        <div class="field" style="max-width:120px"><label for="mr-${ex.id}">${isTime(v) ? "Time" : "Reps"}</label><input id="mr-${ex.id}" value="${esc(v.reps)}" placeholder="${isTime(v) ? "e.g. 1:30" : "reps"}"></div>
-      </div>
-      <button class="btn" style="background:var(--max);color:#fff" data-max="${ex.id}">Update max</button>
+      <span class="hist">${v.maxDate ? `${v.maxFrom ? "From your " + esc(v.maxFrom) + " workout · " : "Since "}${esc(fmtDate(v.maxDate, { day: "numeric", month: "short", year: "numeric" }))}` : "Set automatically from your first logged workout"}</span>
+      ${live && setsDone(ex.id) ? (() => { const tp = topSet(v, getSets(ex.id).filter(x => x && x.done)); return tp ? `<span class="hist">Today's top set: <b class="red">${esc(setText(tp))}</b> · becomes your working max when you finish</span>` : ""; })() : ""}
       ${hist.length ? `<div class="hist"><span class="label" style="color:var(--muted)">Earlier</span>${hist.map(h => `<span class="num">${esc(maxText(h) || "—")} · ${esc(fmtDate(h.date, { day: "numeric", month: "short", year: "2-digit" }))}</span>`).join("")}</div>` : ""}
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -1091,6 +1088,12 @@ function startDay(day, date) {
 function logEntry(dayId, date, items) {
   S.log.push({ id: uid(), date, dayId, at: new Date().toISOString(), items: items || [] });
 }
+function topSet(v, done) { // heaviest set, then most reps (timed: heaviest load, then longest time)
+  const cand = done.map(x => isTime(v) ? { w: x.w || "", t: x.t } : { w: x.w, r: x.r }).filter(x => isTime(v) ? +x.t > 0 : (String(x.r ?? "").trim() !== ""));
+  if (!cand.length) return null;
+  const kg = x => parseW(x.w)?.kg ?? -Infinity;
+  return cand.sort((a, b) => kg(b) - kg(a) || (isTime(v) ? b.t - a.t : (parseFloat(b.r) || 0) - (parseFloat(a.r) || 0)))[0];
+}
 function prToast(day, exId, st) {
   if (!st) return; const v = cur(findEx(day, exId).ex);
   const x = isTime(v) ? { w: st.w || "", t: st.t } : { w: st.w, r: st.r };
@@ -1107,6 +1110,16 @@ function finishDay(day) {
     const best = {};
     sets.forEach(x => { if (!validPR(x)) return; const k = prKey(x); if (!best[k] || prVal(x) > prVal(best[k])) best[k] = x; });
     Object.values(best).forEach(x => { if (addPR(v.name, x, date)) prs.push(setText(x)); });
+    // working max follows what you actually lifted
+    const tp = topSet(v, sets);
+    if (tp) {
+      const nw = String(tp.w || ""), nr = isTime(v) ? fmtDur(tp.t) : String(tp.r);
+      if (nw !== String(v.weight || "") || nr !== String(v.reps || "")) {
+        if (v.weight || v.reps) (v.history = v.history || []).push({ weight: v.weight, reps: v.reps, date: v.maxDate || date });
+        v.weight = nw; v.reps = nr;
+      }
+      v.maxDate = date; v.maxFrom = day.name;
+    }
     prCount += prs.length;
     return { name: v.name, label: e.label || "", sets, prs };
   });
@@ -1260,6 +1273,12 @@ document.addEventListener("click", e => {
     const f = findEx(day, d.save), v = cur(f.ex), val = id => document.getElementById(id + "-" + f.ex.id).value;
     v.name = val("f-name").trim() || v.name; v.sets = val("f-sets").trim(); { const l = ensureLib(v.name); if (l) v.name = l.name; }
     v.count = Math.max(1, Math.min(12, parseInt(val("f-count"), 10) || 1)); v.notes = val("f-notes").trim();
+    { const w = readW("f-mw-" + f.ex.id), rp = val("f-mr").trim();
+      if (w !== String(v.weight || "") || rp !== String(v.reps || "")) {
+        if (v.weight || v.reps) (v.history = v.history || []).push({ weight: v.weight, reps: v.reps, date: v.maxDate || today() });
+        v.weight = w; v.reps = rp; v.maxDate = today(); v.maxFrom = "";
+        addPR(v.name, { w, ...parseRT(rp) }, today());
+      } }
     { const nm = val("f-mode"); if (nm !== v.mode) { v.mode = nm; if (S.active && S.active.sets) delete S.active.sets[f.ex.id]; } }
     f.ex.label = val("f-label").trim();
     exEdit = null; save(); render(); toast("Saved"); return;
@@ -1267,15 +1286,6 @@ document.addEventListener("click", e => {
   if (d.addvar && day) { const f = findEx(day, d.addvar); f.ex.variants.push(V("Alternative exercise", cur(f.ex).sets || "3×10")); exEdit = f.ex.id; f.ex.cur = f.ex.variants.length - 1; save(); render(); const i = document.getElementById("f-name-" + f.ex.id); if (i) { i.focus(); i.select(); } return; }
   if (d.delvar && day) { const f = findEx(day, d.delvar); ask(`Remove “${cur(f.ex).name}” from this exercise?`, "Remove", () => { f.ex.variants.splice(f.ex.cur || 0, 1); f.ex.cur = 0; save(); render(); }); return; }
   if (d.delex && day) { const f = findEx(day, d.delex); ask(`Delete “${cur(f.ex).name}” from ${day.name}?`, "Delete", () => { f.sec.items.splice(f.i, 1); cleanGroups(f.sec); exEdit = null; save(); go("day-" + day.id); }); return; }
-  if (d.max && day) {
-    const f = findEx(day, d.max), v = cur(f.ex);
-    const w = readW("mw-" + f.ex.id), rp = document.getElementById("mr-" + f.ex.id).value.trim();
-    if (w === String(v.weight || "") && rp === String(v.reps || "")) { toast("Max unchanged"); return; }
-    if (v.weight || v.reps) (v.history = v.history || []).push({ weight: v.weight, reps: v.reps, date: v.maxDate || today() });
-    v.weight = w; v.reps = rp; v.maxDate = today();
-    const pr = addPR(v.name, { w, ...parseRT(rp) }, today());
-    save(); render(); toast(pr ? "New max and PR saved 🏆" : "Max saved 💪"); return;
-  }
   if (d.rest !== undefined) { clearInterval(timerInt); timerInt = null; timerEnd = +d.rest ? Date.now() + d.rest * 1000 : 0; if (timerEnd) timerInt = setInterval(tickTimer, 250); render(); return; }
   if (t.id === "pm" || t.id === "nm") { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + (t.id === "pm" ? -1 : 1), 1); render(); return; }
   if (d.day) { calSel = d.day; render(); return; }
