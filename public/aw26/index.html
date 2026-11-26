@@ -251,7 +251,15 @@ h3 { font-size: 1.2rem; }
 .setrow.tm.now { grid-template-columns: 22px minmax(0, 1fr) 44px 48px; }
 .setrow .swt { height: 44px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface); font-size: .9rem; }
 .setrow .swt.run { background: var(--max); border-color: var(--max); color: #fff; }
-.swipe { position: relative; border-radius: var(--r); }
+.swipe { position: relative; border-radius: var(--r); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.swipe.lifted { z-index: 50; pointer-events: none; transition: none; opacity: .88; }
+.swipe.lifted > .ex { box-shadow: 0 14px 34px rgba(0, 0, 0, .28); border-color: var(--dc); }
+body.dnd, body.dnd * { -webkit-user-select: none; user-select: none; cursor: grabbing; }
+.swipe.drop-ss > .ex { outline: 2.5px dashed var(--dc); outline-offset: 2px; }
+.swipe.drop-ss::after { content: "Superset"; position: absolute; right: 12px; top: -11px; z-index: 3; background: var(--dc); color: #fff; font-size: .7rem; font-weight: 700; letter-spacing: .04em; padding: 2px 9px; border-radius: 999px; }
+.swipe.drop-before::before, .swipe.drop-after::before { content: ""; position: absolute; left: 6px; right: 6px; height: 4px; border-radius: 2px; background: var(--dc); z-index: 3; }
+.swipe.drop-before::before { top: -6px; }
+.swipe.drop-after::before { bottom: -6px; }
 .swipe-bg { position: absolute; inset: 0; border-radius: var(--r); background: var(--max); color: #fff; display: flex; align-items: center; padding-left: 18px; font-weight: 700; opacity: 0; pointer-events: none; }
 .swipe > .ex { position: relative; touch-action: pan-y; transition: transform .18s ease, border-color .15s; }
 .swipe.dragging > .ex { transition: none; }
@@ -741,7 +749,7 @@ function exRow(day, ex) {
     <span class="sub">${ex.label ? `<span class="cat">${esc(ex.label)}</span> · ` : ""}${esc(v.sets)}${alts}</span><span></span>${bars}</button>`;
 }
 
-const swipeRow = (day, ex) => `<div class="swipe" data-swipe="${ex.id}"><span class="swipe-bg" aria-hidden="true">Delete</span>${exRow(day, ex)}</div>`;
+const swipeRow = (day, ex) => `<div class="swipe" style="--dc:${META[day.id].color}" data-swipe="${ex.id}"><span class="swipe-bg" aria-hidden="true">Delete</span>${exRow(day, ex)}</div>`;
 function viewDay(r) {
   const day = dayById(r.day); if (!day) return viewHome();
   const color = META[day.id].color;
@@ -782,7 +790,7 @@ function viewDay(r) {
       <button class="iconbtn ${editMode ? "on" : ""}" id="edit">${editMode ? "Done" : "Edit"}</button></div>
     ${head}
     ${day.guide && day.guide.length ? `<details class="card pad guide"><summary>Ski &amp; sports rules</summary><dl>${day.guide.map(([t, d]) => `<dt>${esc(t)}</dt><dd>${esc(d)}</dd>`).join("")}</dl></details>` : ""}
-    ${editMode ? "" : `<p class="hint">Swipe an exercise to the right to delete it.</p>`}
+    ${editMode ? "" : `<p class="hint">Swipe right to delete. Hold an exercise and drag it onto another to make a superset, or to the edge of one to move it.</p>`}
     ${editMode ? `<p class="notes">Reorder with the arrows. Link two neighbouring exercises to do them as a superset. Tap an exercise and use ⇄ Swap to change it, or Edit to rename it, change sets or add alternatives. New exercises can come from your exercise database.</p>` : ""}
     ${secs}
   </div>${tabs("home")}`;
@@ -1164,31 +1172,103 @@ function render() {
   document.title = "AW/26 Training";
 }
 
-let drag = null, swipedAt = 0;
+/* ---------- touch gestures on exercise cards ----------
+   swipe right = delete · hold ~0.4 s then drag = superset (drop on a card) or move (drop on its edge) · vertical = scroll */
+let G = null, swipedAt = 0;
+const HOLD_MS = 380;
+const clearDrop = keep => document.querySelectorAll(".drop-ss, .drop-before, .drop-after").forEach(x => { if (x !== keep) x.classList.remove("drop-ss", "drop-before", "drop-after"); });
 document.addEventListener("pointerdown", e => {
   const w = e.target.closest && e.target.closest(".swipe"); if (!w || e.button) return;
-  drag = { w, el: w.querySelector(".ex"), bg: w.querySelector(".swipe-bg"), x: e.clientX, y: e.clientY, dx: 0, on: false, id: e.pointerId };
+  if (G) clearTimeout(G.timer);
+  G = { w, el: w.querySelector(".ex"), bg: w.querySelector(".swipe-bg"), id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, sy0: window.scrollY, mode: "wait", dx: 0, vx: 0, lt: performance.now(), lx: e.clientX };
+  G.timer = setTimeout(() => { if (G && G.mode === "wait") startDnd(); }, HOLD_MS);
 });
-document.addEventListener("pointermove", e => {
-  if (!drag || e.pointerId !== drag.id) return;
-  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-  if (!drag.on) {
-    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag = null; return; }
-    if (dx > 10 && dx > Math.abs(dy)) { drag.on = true; drag.w.classList.add("dragging"); try { drag.w.setPointerCapture(e.pointerId); } catch {} } else return;
-  }
-  drag.dx = Math.max(0, dx);
-  drag.el.style.transform = `translateX(${drag.dx}px)`;
-  drag.bg.style.opacity = Math.min(1, drag.dx / 80);
-});
-function endDrag() {
-  if (!drag) return; const d = drag; drag = null; if (!d.on) return;
-  swipedAt = Date.now(); d.w.classList.remove("dragging");
-  const W = d.w.offsetWidth;
-  if (d.dx > W * 0.35) { d.el.style.transform = `translateX(${W}px)`; setTimeout(() => deleteEx(d.w.dataset.swipe), 170); }
-  else { d.el.style.transform = ""; d.bg.style.opacity = 0; }
+function startDnd() {
+  G.mode = "drag"; swipedAt = Date.now() + 1e6; // no tap while holding
+  try { navigator.vibrate && navigator.vibrate(12); } catch {}
+  document.body.classList.add("dnd"); G.w.classList.add("lifted");
+  G.w.style.transform = "scale(1.03)";
+  G.raf = requestAnimationFrame(dndFrame);
 }
-document.addEventListener("pointerup", endDrag);
-document.addEventListener("pointercancel", endDrag);
+document.addEventListener("pointermove", e => {
+  if (!G || e.pointerId !== G.id) return;
+  const now = performance.now();
+  G.vx = (e.clientX - G.lx) / Math.max(1, now - G.lt); G.lx = e.clientX; G.lt = now;
+  G.x = e.clientX; G.y = e.clientY;
+  const dx = e.clientX - G.x0, dy = e.clientY - G.y0;
+  if (G.mode === "wait") {
+    if (dx > 6 && dx > Math.abs(dy) * 1.2) { clearTimeout(G.timer); G.mode = "swipe"; G.w.classList.add("dragging"); swipedAt = Date.now() + 1e6; }
+    else if (Math.hypot(dx, dy) > 8) { clearTimeout(G.timer); G = null; return; } // a scroll or a left swipe: let the page have it
+    else return;
+  }
+  if (G.mode === "swipe") {
+    G.dx = Math.max(0, dx);
+    G.el.style.transform = `translateX(${G.dx}px)`;
+    G.bg.style.opacity = Math.min(1, G.dx / 70);
+  }
+});
+// keep the page still while swiping or dragging a card
+document.addEventListener("touchmove", e => { if (G && (G.mode === "drag" || G.mode === "swipe")) e.preventDefault(); }, { passive: false });
+document.addEventListener("contextmenu", e => { if (e.target.closest && e.target.closest(".swipe")) e.preventDefault(); });
+function dndFrame() {
+  if (!G || G.mode !== "drag") return;
+  const H = window.innerHeight;
+  if (G.y < 90) window.scrollBy(0, -Math.ceil((90 - G.y) / 5));
+  else if (G.y > H - 120) window.scrollBy(0, Math.ceil((G.y - (H - 120)) / 5));
+  const ty = G.y - G.y0 + (window.scrollY - G.sy0), tx = (G.x - G.x0) * 0.25;
+  G.w.style.transform = `translate(${tx}px, ${ty}px) scale(1.03)`;
+  const under = document.elementFromPoint(G.x, G.y), tgt = under && under.closest ? under.closest(".swipe") : null;
+  G.drop = null;
+  if (tgt && tgt !== G.w) {
+    const r = tgt.getBoundingClientRect(), f = (G.y - r.top) / r.height;
+    const pos = f < 0.25 ? "before" : f > 0.75 ? "after" : "ss";
+    clearDrop(tgt); tgt.classList.remove("drop-ss", "drop-before", "drop-after"); tgt.classList.add("drop-" + pos);
+    G.drop = { id: tgt.dataset.swipe, pos };
+  } else clearDrop(null);
+  G.raf = requestAnimationFrame(dndFrame);
+}
+function gEnd(e) {
+  if (!G || (e && e.pointerId !== G.id)) return;
+  const g = G; G = null; clearTimeout(g.timer);
+  if (g.mode === "wait") return; // plain tap: the click opens the exercise
+  swipedAt = Date.now();
+  if (g.mode === "swipe") {
+    g.w.classList.remove("dragging");
+    const W = g.w.offsetWidth;
+    if (e.type !== "pointercancel" && (g.dx > W * 0.33 || (g.vx > 0.45 && g.dx > 40))) {
+      g.el.style.transform = `translateX(${W}px)`; g.bg.style.opacity = 1;
+      setTimeout(() => deleteEx(g.w.dataset.swipe), 150);
+    } else { g.el.style.transform = ""; g.bg.style.opacity = 0; }
+    return;
+  }
+  cancelAnimationFrame(g.raf); document.body.classList.remove("dnd"); clearDrop(null);
+  g.w.classList.remove("lifted"); g.w.style.transform = "";
+  if (g.drop && e.type !== "pointercancel") dropEx(g.w.dataset.swipe, g.drop);
+}
+document.addEventListener("pointerup", gEnd);
+document.addEventListener("pointercancel", gEnd);
+function dropEx(dragId, drop) {
+  const day = dayById(route().day); if (!day || dragId === drop.id) return;
+  const snap = JSON.stringify(day.sections);
+  const a = findEx(day, dragId); if (!a) return;
+  const ex = a.ex; a.sec.items.splice(a.i, 1);
+  const b = findEx(day, drop.id); if (!b) { day.sections = JSON.parse(snap); return; }
+  let msg;
+  if (drop.pos === "ss") {
+    b.sec.items.splice(b.i + 1, 0, ex);
+    const g = b.ex.group || "g" + uid(); b.ex.group = g; ex.group = g;
+    msg = `Superset: ${cur(b.ex).name} + ${cur(ex).name}`;
+  } else {
+    const at = drop.pos === "before" ? b.i : b.i + 1;
+    b.sec.items.splice(at, 0, ex);
+    const prev = b.sec.items[at - 1], next = b.sec.items[at + 1];
+    ex.group = prev && next && prev.group && prev.group === next.group ? prev.group : null;
+    msg = `Moved ${cur(ex).name}`;
+  }
+  day.sections.forEach(cleanGroups); save(); render();
+  try { navigator.vibrate && navigator.vibrate(10); } catch {}
+  toast(msg, "Undo", () => { day.sections = JSON.parse(snap); save(); render(); });
+}
 
 function updSet(exId, i) { // read a set row's inputs into the session
   if (!S.active) return [];
@@ -1226,7 +1306,7 @@ document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.cl
 
 document.addEventListener("click", e => {
   const t = e.target.closest("button, a"); if (!t || t.tagName === "A") return;
-  if (Date.now() - swipedAt < 450) { e.preventDefault(); return; }
+  if (Date.now() - swipedAt < 300) { e.preventDefault(); return; }
   const r = route(), day = r.day ? dayById(r.day) : null, d = t.dataset;
   if (d.go !== undefined) { go(d.go); return; }
   if (t.id === "edit") { editMode = !editMode; render(); return; }
@@ -1245,6 +1325,8 @@ document.addEventListener("click", e => {
   if (d.step && day) {
     const f = findEx(day, d.step), v = cur(f.ex);
     v.count = Math.max(1, Math.min(12, (v.count || 1) + +d.dir));
+    if (/^\s*\d+\s*[×xX]/.test(v.sets || "")) v.sets = v.sets.replace(/^\s*\d+(\s*[×xX])/, v.count + "$1");
+    else if (v.count > 1 && v.sets) v.sets = `${v.count}×${v.sets}`;
     if (S.active && S.active.sets && S.active.sets[f.ex.id] && S.active.sets[f.ex.id].length > v.count) S.active.sets[f.ex.id] = S.active.sets[f.ex.id].slice(0, v.count);
     save(); render(); return;
   }
