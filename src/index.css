@@ -1818,3 +1818,34 @@ select:focus {
   padding: 6px 10px;
   width: 170px;
 }
+.family-sync {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.family-code {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: clamp(20px, 6vw, 30px);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background: #fff3c4;
+  border: 3px dashed #ffd23f;
+  border-radius: 16px;
+  padding: 10px 14px;
+  text-align: center;
+  user-select: all;
+  -webkit-user-select: all;
+}
+.btn.join-family {
+  background: #e7f5ff;
+  font-size: 16px;
+}
+.join-family-box {
+  background: #e7f5ff;
+  border-radius: 16px;
+  padding: 10px 12px;
+}
+.join-family-box input {
+  flex: 1;
+  font-size: 16px;
+}

@@ -8,6 +8,7 @@ import { speak } from '../lib/speech'
 import { sfx } from '../lib/sfx'
 import { PEPETTE_HOME } from '../data/lines'
 import { fit, useScreen } from '../lib/useScreen'
+import { joinFamily, syncAvailable } from '../lib/sync'
 
 const HOME_LINE = PEPETTE_HOME
 const PEPETTE_VOICE = FRIENDS.pepette.voice
@@ -88,6 +89,7 @@ function Setup({ onDone, onCancel, first }: { onDone: () => void; onCancel: () =
             ? 'Pour les parents : créez un profil pour chaque enfant. Les prénoms restent sur cet appareil.'
             : 'Créez le profil de l’enfant.'}
         </p>
+        {first && syncAvailable && <JoinFromSetup onJoined={onDone} />}
         <label>
           Prénom de l’enfant
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Prénom" autoFocus />
@@ -162,6 +164,44 @@ function Setup({ onDone, onCancel, first }: { onDone: () => void; onCancel: () =
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/** A second phone (e.g. the other parent's): join the family instead of creating profiles again. */
+function JoinFromSetup({ onJoined }: { onJoined: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [code, setCode] = useState('')
+  const [msg, setMsg] = useState('')
+  const [busy, setBusy] = useState(false)
+  if (!open)
+    return (
+      <button className="btn join-family" onClick={() => setOpen(true)}>
+        📲 Déjà installé sur un autre téléphone ? J’ai un code famille
+      </button>
+    )
+  return (
+    <div className="join-family-box">
+      <div className="label">Code famille (Coin des parents de l’autre téléphone)</div>
+      <div className="row">
+        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="K7PX-M3QD-T9WB-2FHR" autoCapitalize="characters" autoFocus />
+        <button
+          className="btn primary small"
+          disabled={busy || code.trim().length < 16}
+          onClick={async () => {
+            setBusy(true)
+            const r = await joinFamily(code)
+            setBusy(false)
+            if (r.ok) {
+              sfx.win()
+              onJoined()
+            } else setMsg(r.message ?? 'Erreur')
+          }}
+        >
+          Relier
+        </button>
+      </div>
+      {msg && <p className="voice-msg">{msg}</p>}
     </div>
   )
 }

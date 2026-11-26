@@ -1,25 +1,12 @@
-import { useEffect, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
 import { PLACES } from '../data/content'
 import { TopBar } from '../components/ui'
 import { removeKid, setFamily, updateKid, useStore } from '../lib/store'
 import { canListen, canSpeak, speak } from '../lib/speech'
 import { VoicePicker } from './VoicePicker'
-import { onSession, sendCode, signOut, syncAvailable, verifyCode } from '../lib/sync'
+import { FamilySync } from './FamilySync'
 
 export function Parent({ onBack }: { onBack: () => void }) {
   const { family, kids } = useStore()
-  const [session, setSession] = useState<Session | null>(null)
-  const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
-  const [sent, setSent] = useState(false)
-  const [msg, setMsg] = useState('')
-  useEffect(() => {
-    const off = onSession(setSession)
-    return () => {
-      off()
-    }
-  }, [])
 
   return (
     <div className="screen parent-screen">
@@ -109,60 +96,8 @@ export function Parent({ onBack }: { onBack: () => void }) {
         </section>
 
         <section className="panel">
-          <h3>☁️ Sauvegarde en ligne</h3>
-          {!syncAvailable ? (
-            <p className="muted">La progression est enregistrée sur cet appareil. (Sauvegarde en ligne non configurée.)</p>
-          ) : session ? (
-            <>
-              <p>
-                ✅ Connecté : <strong>{session.user.email}</strong>. La progression est sauvegardée et partagée entre vos appareils.
-              </p>
-              <button className="btn" onClick={() => void signOut()}>
-                Se déconnecter
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="muted">Connectez-vous avec votre e-mail pour retrouver la progression sur la tablette, le téléphone, etc.</p>
-              {!sent ? (
-                <div className="row">
-                  <input type="email" placeholder="email@exemple.fr" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <button
-                    className="btn primary"
-                    onClick={async () => {
-                      try {
-                        await sendCode(email)
-                        setSent(true)
-                        setMsg('Code envoyé ! Regardez vos e-mails.')
-                      } catch (e) {
-                        setMsg((e as Error).message)
-                      }
-                    }}
-                  >
-                    Recevoir un code
-                  </button>
-                </div>
-              ) : (
-                <div className="row">
-                  <input inputMode="numeric" placeholder="Code reçu" value={code} onChange={(e) => setCode(e.target.value)} />
-                  <button
-                    className="btn primary"
-                    onClick={async () => {
-                      try {
-                        await verifyCode(email, code.trim())
-                        setMsg('')
-                      } catch (e) {
-                        setMsg((e as Error).message)
-                      }
-                    }}
-                  >
-                    Valider
-                  </button>
-                </div>
-              )}
-              {msg && <p className="muted">{msg}</p>}
-            </>
-          )}
+          <h3>☁️ Partager entre téléphones</h3>
+          <FamilySync />
         </section>
       </div>
     </div>
