@@ -309,8 +309,15 @@ const fmtDate = (k, opts = { weekday: "short", day: "numeric", month: "short" })
 const guessCount = s => { const m = String(s || "").match(/^\s*(\d+)\s*[×xX]/); if (m) return Math.min(12, +m[1]); const list = String(s || "").match(/^\s*\d+(\s*,\s*\d+)+/); return list ? list[0].split(",").length : 1; };
 const num = v => { const s = String(v ?? "").trim().replace(",", "."); return s === "" ? "" : s; };
 /* ---------- seed: the programme from the Google Doc ---------- */
+const LEAD = /^\s*(\d+)(\s*[×xX])/;
+function syncSetsText(v) { // keep "N×…" in step with the saved number of sets
+  const t = String(v.sets || "");
+  if (LEAD.test(t)) v.sets = t.replace(LEAD, (v.count || 1) + "$2");
+  else if ((v.count || 1) > 1 && t && !/^\d+(\s*,\s*\d+)+/.test(t)) v.sets = `${v.count}×${t}`;
+  return v.sets;
+}
 function isTimeText(x) { return /\d\s*(s|sec|secs|seconds?|min|mins|minutes?)\b|\d:\d\d/i.test(String(x || "")); }
-function V(name, sets, o = {}) {
+function V(name, sets, o = {}) { // count: explicit, else read from "N×…"
   return { id: uid(), name, sets, mode: o.m || (isTimeText(sets) ? "time" : "reps"), count: o.c ?? guessCount(sets), notes: o.n || "", weight: o.w ?? "", reps: o.r ?? "", maxDate: (o.w || o.r) ? today() : "", history: [] };
 }
 function E(...variants) { return { id: uid(), cur: 0, group: null, variants }; }
@@ -754,6 +761,7 @@ function migrate(st) {
   }
   if (st.active && !st.active.sets) st.active.sets = {};
   st.days.forEach(d => { if (!d.short) d.short = d.name.split(" ")[0]; });
+  st.days.forEach(d => d.sections.forEach(sc => sc.items.forEach(e => e.variants.forEach(v => { if (v.count) syncSetsText(v); }))));
   st.days.forEach(d => d.sections.forEach(sc => sc.items.forEach(e => e.variants.forEach(v => {
     if (v.mode) return;
     if (norm(v.name) === "handstands" && v.sets === "Practice") v.sets = "10 min";
@@ -1497,8 +1505,7 @@ document.addEventListener("click", e => {
   if (d.step && day) {
     const f = findEx(day, d.step), v = cur(f.ex);
     v.count = Math.max(1, Math.min(12, (v.count || 1) + +d.dir));
-    if (/^\s*\d+\s*[×xX]/.test(v.sets || "")) v.sets = v.sets.replace(/^\s*\d+(\s*[×xX])/, v.count + "$1");
-    else if (v.count > 1 && v.sets) v.sets = `${v.count}×${v.sets}`;
+    syncSetsText(v);
     if (S.active && S.active.sets && S.active.sets[f.ex.id] && S.active.sets[f.ex.id].length > v.count) S.active.sets[f.ex.id] = S.active.sets[f.ex.id].slice(0, v.count);
     save(); render(); return;
   }
@@ -1525,8 +1532,14 @@ document.addEventListener("click", e => {
   if (d.cancel) { exEdit = null; render(); return; }
   if (d.save && day) {
     const f = findEx(day, d.save), v = cur(f.ex), val = id => document.getElementById(id + "-" + f.ex.id).value;
-    v.name = val("f-name").trim() || v.name; v.sets = val("f-sets").trim(); { const l = ensureLib(v.name); if (l) v.name = l.name; }
-    v.count = Math.max(1, Math.min(12, parseInt(val("f-count"), 10) || 1)); v.notes = val("f-notes").trim();
+    v.name = val("f-name").trim() || v.name; { const l = ensureLib(v.name); if (l) v.name = l.name; }
+    { const oldCount = v.count || 1, newText = val("f-sets").trim(), field = Math.max(1, Math.min(12, parseInt(val("f-count"), 10) || 1));
+      const lead = (newText.match(LEAD) || [])[1];
+      v.sets = newText;
+      v.count = field !== oldCount ? field : (lead ? Math.max(1, Math.min(12, +lead)) : field);
+      syncSetsText(v);
+      if (S.active && S.active.sets && S.active.sets[f.ex.id] && S.active.sets[f.ex.id].length > v.count) S.active.sets[f.ex.id] = S.active.sets[f.ex.id].slice(0, v.count); }
+    v.notes = val("f-notes").trim();
     { const w = readW("f-mw-" + f.ex.id), rp = val("f-mr").trim();
       if (w !== String(v.weight || "") || rp !== String(v.reps || "")) {
         if (v.weight || v.reps) (v.history = v.history || []).push({ weight: v.weight, reps: v.reps, date: v.maxDate || today() });
