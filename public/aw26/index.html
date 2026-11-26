@@ -2,10 +2,10 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="AW/26">
+<meta name="apple-mobile-web-app-title" content="Training">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head><body>
-<title>AW/26 Training</title>
+<title>Johann &amp; Pani Training</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,6 +29,11 @@
   --c-la: #0d8a6a;
   --c-lb: #b5651d;
   --c-sport: #c23b5e;
+  --c-lower: #0f8a8a;
+  --c-upper: #4a55c9;
+  --c-full: #c47a0d;
+  --c-cardio: #d04673;
+  --c-pilates: #7a5bb8;
   --shadow: 0 1px 2px rgba(20, 24, 32, .06), 0 4px 14px rgba(20, 24, 32, .05);
   --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -39,7 +44,7 @@
     --bg: #111318; --surface: #1a1d24; --surface-2: #22262f; --line: #2f3440;
     --fg: #eef0f4; --muted: #9aa2b1; --accent: #eef0f4; --on-accent: #111318;
     --max: #ff6a5f; --max-soft: #3a1d1b; --ok: #4cc488;
-    --c-ua: #a68bf0; --c-ub: #6fa3ff; --c-la: #3fc79f; --c-lb: #f09a4f; --c-sport: #ff7f9f;
+    --c-ua: #a68bf0; --c-ub: #6fa3ff; --c-la: #3fc79f; --c-lb: #f09a4f; --c-sport: #ff7f9f; --c-lower: #2fb9b6; --c-upper: #8b94ff; --c-full: #f0a43a; --c-cardio: #ff7aa2; --c-pilates: #b596f2;
     --shadow: none; color-scheme: dark;
   }
 }
@@ -47,7 +52,7 @@
   --bg: #111318; --surface: #1a1d24; --surface-2: #22262f; --line: #2f3440;
   --fg: #eef0f4; --muted: #9aa2b1; --accent: #eef0f4; --on-accent: #111318;
   --max: #ff6a5f; --max-soft: #3a1d1b; --ok: #4cc488;
-  --c-ua: #a68bf0; --c-ub: #6fa3ff; --c-la: #3fc79f; --c-lb: #f09a4f; --c-sport: #ff7f9f;
+  --c-ua: #a68bf0; --c-ub: #6fa3ff; --c-la: #3fc79f; --c-lb: #f09a4f; --c-sport: #ff7f9f; --c-lower: #2fb9b6; --c-upper: #8b94ff; --c-full: #f0a43a; --c-cardio: #ff7aa2; --c-pilates: #b596f2;
   --shadow: none; color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -84,7 +89,7 @@ h3 { font-size: 1.2rem; }
 
 /* hero */
 .hero { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
-.hero h1 span { color: var(--c-ua); }
+.hero h1 span { color: var(--acc, var(--max)); }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { font-size: .78rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
 
@@ -264,6 +269,19 @@ body.dnd, body.dnd * { -webkit-user-select: none; user-select: none; cursor: gra
 .swipe > .ex { position: relative; touch-action: pan-y; transition: transform .18s ease, border-color .15s; }
 .swipe.dragging > .ex { transition: none; }
 .hint { margin: 0; font-size: .8rem; color: var(--muted); }
+.video { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); text-decoration: none; color: var(--fg); border: 1px solid var(--line); }
+.video .play { width: 40px; height: 40px; border-radius: 10px; background: #e62117; color: #fff; display: grid; place-items: center; font-size: 1rem; flex: none; }
+.video span { min-width: 0; }
+.video small { display: block; color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
+.who { gap: 16px; padding-block: 32px calc(32px + env(safe-area-inset-bottom, 0px)); }
+.who h1 { font-size: 2.6rem; }
+.person { display: grid; grid-template-columns: 64px 1fr auto; gap: 16px; align-items: center; padding: 18px; text-align: left; width: 100%; border-left: 6px solid var(--dc); }
+.person .av { width: 64px; height: 64px; border-radius: 50%; background: var(--dc); color: #fff; display: grid; place-items: center; font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; }
+.person .meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.person .meta b { font-family: var(--font-display); font-size: 1.6rem; text-transform: uppercase; line-height: 1; }
+.person .meta small { color: var(--muted); font-size: .86rem; }
+.userchip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px 4px 4px; font-weight: 600; font-size: .86rem; }
+.userchip i { width: 28px; height: 28px; border-radius: 50%; background: var(--dc); color: #fff; font-style: normal; display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
 .toast button { margin-left: 10px; border: 0; background: transparent; color: inherit; font-weight: 800; text-decoration: underline; padding: 0; }
 textarea.code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; min-height: 120px; }
 @media (prefers-reduced-motion: no-preference) { .btn, .chip, .set, .ex { transition: background-color .15s, border-color .15s, transform .1s; } .set:active, .btn:active { transform: scale(.97); } }
@@ -275,15 +293,8 @@ textarea.code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size
 <script>
 (() => {
 "use strict";
-const KEY = "aw26.v1";
-const DAYS_META = [
-  { id: "upperA", color: "var(--c-ua)", letter: "UA" },
-  { id: "upperB", color: "var(--c-ub)", letter: "UB" },
-  { id: "lowerA", color: "var(--c-la)", letter: "LA" },
-  { id: "lowerB", color: "var(--c-lb)", letter: "LB" },
-  { id: "sport", color: "var(--c-sport)", letter: "S" },
-];
-const META = Object.fromEntries(DAYS_META.map(d => [d.id, d]));
+let KEY = "";
+let META = {};
 
 /* ---------- helpers ---------- */
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
@@ -305,7 +316,7 @@ function V(name, sets, o = {}) {
 function E(...variants) { return { id: uid(), cur: 0, group: null, variants }; }
 function S_(title, items) { return { id: uid(), title, items }; }
 function L(label, ...variants) { const e = E(...variants); e.label = label; return e; }
-function seed() {
+function seedJohann() {
   const warm = () => S_("Warm-up", [E(V("Warm-up", "10 min", { c: 1 }))]);
   const stretch = () => S_("Stretch", [E(V("Stretch", "10 min", { c: 1 }))]);
   const face = L("Shoulder health", V("Face pull", "3×15"));
@@ -316,7 +327,7 @@ function seed() {
   curl.group = ext.group = "g" + uid();
   return applyBW({
     v: 1, updatedAt: 0,
-    title: "AW/26",
+    title: "AW/26", profile: "johann",
     tags: ["Upper / lower split", "Longevity", "Functional", "Body control", "Heart health", "Safety first", "Lean"],
     cycle: ["upperA", "lowerA", "upperB", "lowerB"],
     days: [
@@ -402,40 +413,175 @@ function seed() {
   });
 }
 
+function seedPani() {
+  const tri = E(V("Tricep pushdown (cable)", "3×8", { w: "8.25", r: "8" }));
+  const bic = E(V("Bicep curl (DB or cable)", "3×12", { w: "6.25", r: "12" }));
+  tri.group = bic.group = "g" + uid();
+  return applyBW({
+    v: 1, updatedAt: 0, profile: "pani",
+    title: "Mat & Iron Lady",
+    tags: ["5-day programme", "Longevity", "Functional", "Joint health", "Heart health"],
+    days: [
+      { id: "lower", name: "Lower Body", short: "Lower", kind: "strength", focus: "Squat, single-leg work, hips and core.", sections: [
+        S_("Warm-up", [
+          E(V("Glute bridge", "2×15")),
+          E(V("Hip 90/90 switches", "10 reps")),
+          E(V("Bodyweight squat", "2×10", { n: "Slow tempo." })),
+          E(V("Cat-cow", "10 reps")),
+        ]),
+        S_("Main lifts", [
+          E(V("Barbell squat", "10, 8, 6, 4", { c: 4, w: "45", r: "4", n: "Pyramid: 10, 8, 6, 4 reps, adding weight each set. Push through the heels (tryck från häl)." }),
+            V("Goblet squat (DB or KB)", "3×10", { w: "8", r: "10", n: "Feet shoulder-width, controlled descent." })),
+          E(V("Bulgarian split squat", "3×8/side", { w: "5", r: "8" }),
+            V("Single leg press", "3×8/side"),
+            V("Walking lunge", "3×8/side", { w: "5", r: "8" }),
+            V("Reverse lunge", "3×8/side")),
+          E(V("Hip thrust", "3×10", { w: "20", r: "10" })),
+          E(V("Single leg RDL", "3×8/side")),
+          E(V("Dead bug", "3×8/side", { n: "Lower back stays flat on the floor throughout." })),
+        ]),
+        S_("Stretching", [E(V("Lower-body stretch", "5–10 min", { c: 1 }))]),
+      ]},
+      { id: "upper", name: "Upper Body", short: "Upper", kind: "strength", focus: "Push, pull and healthy shoulders.", sections: [
+        S_("Warm-up", [
+          E(V("Arm circles + shoulder rolls", "2 min")),
+          E(V("Band pull-aparts", "2×15", { n: "A towel works if you have no band." })),
+          E(V("Cat-cow + thread the needle", "8/side")),
+          E(V("Scapular wall slides", "2×10")),
+          E(V("Shoulder taps", "2×10")),
+        ]),
+        S_("Exercises", [
+          E(V("Push-up", "3×10", { r: "10", n: "Push-ups on knees are fine. Work toward full push-ups." })),
+          E(V("Assisted pull-up", "3×10", { w: "BW-49.5", r: "10", n: "Assistance 47 + 2.5 kg, logged as BW minus the assistance. Less assistance means stronger. Use a band if needed." }),
+            V("Lat pulldown", "3×10", { w: "20", r: "10", n: "Try the arms slightly inward (armarna lite inåt?)." })),
+          E(V("DB shoulder press", "3×10", { w: "5", r: "10" })),
+          E(V("Seated cable row", "3×12", { w: "20", r: "8", n: "Retract the shoulder blades, avoid shrugging." })),
+          E(V("Face pull", "3×15", { w: "8.25", r: "15", n: "8.25 kg + extra." })),
+          E(V("Lateral raise (DB)", "3×12", { w: "2", r: "12" })),
+        ]),
+        S_("Stretching", [E(V("Upper-body stretch", "5–10 min", { c: 1 }))]),
+      ]},
+      { id: "full", name: "Full Body", short: "Full", kind: "strength", focus: "Deadlift, arms, anti-rotation and power.", sections: [
+        S_("Warm-up", [E(V("Good morning", "3×5", { w: "15", r: "5" }))]),
+        S_("Exercises", [
+          E(V("Barbell deadlift", "4×5–8", { w: "30", r: "5" })),
+          tri, bic,
+          E(V("Pallof press", "3×10/side")),
+          E(V("Hanging knee raise", "3×5", { r: "5" }),
+            V("Farmer's walk", "2×1 min", { w: "14", n: "14 kg per hand." })),
+          E(V("Box jump", "3×10")),
+          E(V("Straight-arm pullover", "3×12")),
+        ]),
+        S_("Stretching", [E(V("Full-body stretch", "5–10 min", { c: 1 }))]),
+      ]},
+      { id: "cardio", name: "Cardio", short: "Cardio", kind: "cardio", focus: "Heart health, aerobic base, active recovery.", sections: [
+        S_("Cardio", [E(
+          V("Bike", "25 min", { c: 1, n: "120–135 bpm (Zone 2, conversational pace)." }),
+          V("Swimming", "20–25 min", { c: 1, n: "Easy, any stroke." }),
+          V("Brisk walk", "30–35 min", { c: 1, n: "Outdoors. Underrated for heart health and fat loss." }),
+          V("Pilates or yoga class", "1 class", { c: 1, m: "time", n: "Counts as this session if it has a cardio component." }))]),
+        S_("Mobility", [
+          E(V("World's greatest stretch", "5/side")),
+          E(V("90/90 hip stretch", "60 s/side")),
+          E(V("Pigeon pose", "60 s/side")),
+          E(V("Seated thoracic rotation", "10/side")),
+          E(V("Cat-cow", "10 reps")),
+          E(V("Doorframe pec stretch", "45 s/side")),
+          E(V("Legs up the wall", "2 min", { n: "Great for circulation and the lower back." })),
+        ]),
+      ]},
+      { id: "pilates", name: "Pilates", short: "Pilates", kind: "other", focus: "Mat Pilates session.", sections: [
+        S_("Session", [E(V("Mat Pilates", "45–60 min", { c: 1 }))]),
+      ]},
+    ],
+    log: [],
+    active: null,
+  });
+}
+
+/* ---------- the two people ---------- */
+const PROFILES = {
+  johann: {
+    id: "johann", name: "Johann", key: "aw26.v1", doc: "state-johann", legacyTitle: "AW/26", seed: seedJohann, videos: false,
+    accent: "26", accentColor: "var(--c-ua)", color: "var(--c-ua)",
+    restText: "Strength is covered. Swim, SUP, bike or a sport for the rest of the week.",
+    days: { upperA: ["var(--c-ua)", "UA"], upperB: ["var(--c-ub)", "UB"], lowerA: ["var(--c-la)", "LA"], lowerB: ["var(--c-lb)", "LB"], sport: ["var(--c-sport)", "S"] },
+  },
+  pani: {
+    id: "pani", name: "Pani", key: "matiron.v1", doc: "state-pani", legacyTitle: "Mat & Iron Lady", seed: seedPani, videos: true,
+    accent: "Lady", accentColor: "var(--max)", color: "var(--c-cardio)",
+    restText: "Strength is covered. Cardio, mobility or Pilates are good choices for the rest of the week.",
+    days: { lower: ["var(--c-lower)", "L"], upper: ["var(--c-upper)", "U"], full: ["var(--c-full)", "F"], cardio: ["var(--c-cardio)", "C"], pilates: ["var(--c-pilates)", "P"] },
+  },
+};
+let P = null;
+function dayMetaFor(prof) {
+  const out = {};
+  Object.entries(prof.days).forEach(([id, [color, letter]]) => { out[id] = { id, color, letter }; });
+  return out;
+}
+
 /* ---------- storage: this browser, plus claude.ai sync when available ---------- */
-let S;
-try { S = JSON.parse(localStorage.getItem(KEY) || "null"); } catch { S = null; }
-if (!S || !Array.isArray(S.days)) S = seed();
-let migratePending = true; // run once helpers are defined
-let remoteRef = null, remoteTimer = null, remoteBusy = false, remoteDirty = false;
-function persistLocal() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
-function save() { S.updatedAt = Date.now(); persistLocal(); if (remoteRef) { clearTimeout(remoteTimer); remoteTimer = setTimeout(pushRemote, 1200); } }
+let S = null;
+let remoteRef = null, remoteFor = null, remoteTimer = null, remoteBusy = false, remoteDirty = false;
+function persistLocal() { if (!KEY || !S) return; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
+function save() { S.updatedAt = Date.now(); persistLocal(); if (remoteRef && P && remoteFor === P.id) { clearTimeout(remoteTimer); remoteTimer = setTimeout(pushRemote, 1200); } }
 async function pushRemote() {
-  if (!remoteRef) return;
+  if (!remoteRef || !P || remoteFor !== P.id) return;
   if (remoteBusy) { remoteDirty = true; return; }
   remoteBusy = true;
-  try { await remoteRef.set({ json: JSON.stringify(S), updatedAt: S.updatedAt }); } catch {}
+  const ref = remoteRef, data = { json: JSON.stringify(S), updatedAt: S.updatedAt, profile: P.id };
+  try { await ref.set(data); } catch {}
   remoteBusy = false;
   if (remoteDirty) { remoteDirty = false; pushRemote(); }
 }
-(async () => {
+function readLocal(prof) {
+  try { const r = JSON.parse(localStorage.getItem(prof.key) || "null"); return r && Array.isArray(r.days) ? r : null; } catch { return null; }
+}
+function loadProfile(id) {
+  const prof = PROFILES[id]; if (!prof) return;
+  clearInterval(swInt); swRun = null; clearInterval(timerInt); timerInt = null; timerEnd = 0;
+  editMode = false; exEdit = null; calMonth = null; calSel = today(); libQuery = ""; histLimit = 20;
+  P = prof; KEY = prof.key; META = dayMetaFor(prof);
+  S = migrate(readLocal(prof) || prof.seed());
+  S.profile = prof.id; persistLocal();
+  try { localStorage.setItem("training.profile", id); } catch {}
+  remoteRef = null; remoteFor = null; clearTimeout(remoteTimer);
+  connectRemote(id);
+}
+function signOut() {
+  clearInterval(swInt); swRun = null; clearInterval(timerInt); timerInt = null; timerEnd = 0;
+  P = null; S = null; KEY = ""; remoteRef = null; remoteFor = null;
+  try { localStorage.removeItem("training.profile"); } catch {}
+  if (location.hash) location.hash = ""; render();
+}
+async function connectRemote(pid) {
   try {
     if (!window.claude || typeof window.claude.use !== "function") return;
     const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
     if (!db || !user) return;
     const id = await user.id();
-    if (!id) return;
-    const ref = db.collection("data/users/" + id).doc("state");
+    if (!id || !P || P.id !== pid) return;
+    const col = db.collection("data/users/" + id);
+    const ref = col.doc(P.doc);
     const snap = await ref.get();
-    const d = snap.exists ? snap.data() : null;
+    const mine = snap.exists ? snap.data() : null;
+    let d = mine;
+    if (!d) { // data saved by the earlier one-person app
+      try {
+        const leg = await col.doc("state").get(), ld = leg.exists ? leg.data() : null;
+        if (ld && typeof ld.json === "string") { const r = JSON.parse(ld.json); if (r && r.title === P.legacyTitle) d = ld; }
+      } catch {}
+    }
+    if (!P || P.id !== pid) return;
     if (d && typeof d.json === "string" && (d.updatedAt || 0) > (S.updatedAt || 0)) {
       const r = JSON.parse(d.json);
-      if (r && Array.isArray(r.days)) { S = migrate(r); persistLocal(); render(); }
+      if (r && Array.isArray(r.days)) { S = migrate(r); S.profile = pid; persistLocal(); render(); }
     }
-    remoteRef = ref;
-    if (!d || (S.updatedAt || 0) > (d.updatedAt || 0)) pushRemote();
+    remoteRef = ref; remoteFor = pid;
+    if (!mine || (S.updatedAt || 0) > (mine.updatedAt || 0)) pushRemote();
   } catch {}
-})();
+}
 
 /* ---------- lookups ---------- */
 const dayById = id => S.days.find(d => d.id === id);
@@ -514,6 +660,8 @@ function parseRT(str) { // "5" -> reps, "1:30" / "45 s" / "2 min" -> time
   if (/:/.test(s) || /\d\s*(s|sec|secs|seconds?|m|min|mins|minutes?|h|hr|hrs|hours?)$/i.test(s)) { const t = parseDur(s); if (t != null) return { t }; }
   return { r: s };
 }
+const safeUrl = u => /^https:\/\//i.test(String(u || "").trim()) ? String(u).trim() : "";
+const videoFor = v => safeUrl(v.video) || "https://www.youtube.com/results?search_query=" + encodeURIComponent(`how to ${v.name} exercise proper form`);
 const loadText = w => { const p = parseW(w); return p && !(p.bw && !p.kg) ? fmtW(w) : ""; };
 function setText(s) {
   if (s.t != null && s.t !== "") { const l = loadText(s.w); return (l ? l + " · " : "") + fmtDur(s.t); }
@@ -588,7 +736,7 @@ function usedIn(name) {
   return out;
 }
 function applyBW(st) {
-  const BW_DEFAULT = ["one-arm push-up", "muscle-up", "trx row", "handstands", "copenhagen plank", "wall sit", "skater squat", "box jump", "depth jump + stick", "single leg bound", "180-360-540 jumps", "hanging", "monkey bars"];
+  const BW_DEFAULT = ["push-up", "glute bridge", "bodyweight squat", "dead bug", "shoulder taps", "hanging knee raise", "one-arm push-up", "muscle-up", "trx row", "handstands", "copenhagen plank", "wall sit", "skater squat", "box jump", "depth jump + stick", "single leg bound", "180-360-540 jumps", "hanging", "monkey bars"];
   st.days.forEach(d => d.sections.forEach(s => s.items.forEach(e => e.variants.forEach(v => { if (!String(v.weight || "").trim() && BW_DEFAULT.includes(norm(v.name))) v.weight = "BW"; }))));
   return st;
 }
@@ -605,10 +753,11 @@ function migrate(st) {
     S = prev;
   }
   if (st.active && !st.active.sets) st.active.sets = {};
+  st.days.forEach(d => { if (!d.short) d.short = d.name.split(" ")[0]; });
   st.days.forEach(d => d.sections.forEach(sc => sc.items.forEach(e => e.variants.forEach(v => {
     if (v.mode) return;
     if (norm(v.name) === "handstands" && v.sets === "Practice") v.sets = "10 min";
-    v.mode = isTimeText(v.sets) || d.kind === "cardio" || ["handstands", "hanging"].includes(norm(v.name)) ? "time" : "reps";
+    v.mode = isTimeText(v.sets) || (d.kind === "cardio" && sc === d.sections[0]) || ["handstands", "hanging", "pilates or yoga class"].includes(norm(v.name)) ? "time" : "reps";
   }))));
   return st;
 }
@@ -710,11 +859,11 @@ function viewHome() {
   let nextCard;
   if (act) nextCard = `<div class="next" style="--dc:${META[act.id].color}"><span class="label">Workout in progress</span><h2>${esc(act.name)}</h2><button class="btn" data-go="day-${act.id}">Continue →</button></div>`;
   else if (nx) nextCard = `<div class="next" style="--dc:${META[nx.id].color}"><span class="label">Next up</span><h2>${esc(nx.name)}</h2><p style="margin:0;opacity:.92">${esc(nx.focus)}</p><button class="btn" data-go="day-${nx.id}">Open workout →</button></div>`;
-  else nextCard = `<div class="next" style="--dc:var(--ok)"><span class="label">This week</span><h2>All sessions done</h2><p style="margin:0;opacity:.92">Strength is covered. Swim, SUP, bike or a sport for the rest of the week.</p></div>`;
+  else nextCard = `<div class="next" style="--dc:var(--ok)"><span class="label">This week</span><h2>All sessions done</h2><p style="margin:0;opacity:.92">${esc(P.restText)}</p></div>`;
   return `<div class="wrap">
     <header class="hero">
-      <span class="label">${esc(S.tags[0] || "")}</span>
-      <h1>${esc(S.title).replace(/26$/, "<span>26</span>")}</h1>
+      <div class="row"><span class="label grow">${esc(S.tags[0] || "")}</span><button class="userchip" id="switchuser" style="--dc:${P.color}" aria-label="Switch user"><i>${esc(P.name[0])}</i>${esc(P.name)} · Switch</button></div>
+      <h1 style="--acc:${P.accentColor}">${(() => { const t = esc(S.title), a = esc(P.accent); return a && t.endsWith(a) ? t.slice(0, -a.length) + `<span>${a}</span>` : t; })()}</h1>
       <div class="tags">${S.tags.slice(1).map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>
     </header>
     ${nextCard}
@@ -857,6 +1006,7 @@ function exPanel(day, ex, inRun) {
         <div class="field" style="max-width:110px"><label for="f-count-${ex.id}">Number of sets</label><input id="f-count-${ex.id}" type="number" min="1" max="12" inputmode="numeric" value="${esc(v.count || 1)}"></div></div>
       <div class="row">${wInput("f-mw-" + ex.id, v.weight, "Working max weight")}<div class="field" style="max-width:120px"><label for="f-mr-${ex.id}">${isTime(v) ? "Time" : "Reps"}</label><input id="f-mr-${ex.id}" value="${esc(v.reps)}" placeholder="${isTime(v) ? "1:30" : "reps"}"></div></div>
       <div class="field"><label for="f-notes-${ex.id}">Notes and cues</label><textarea id="f-notes-${ex.id}">${esc(v.notes)}</textarea></div>
+      ${P.videos ? `<div class="field"><label for="f-video-${ex.id}">YouTube link (optional)</label><input id="f-video-${ex.id}" type="url" inputmode="url" placeholder="https://youtube.com/shorts/…" value="${esc(v.video || "")}"></div>` : ""}
       <div class="row"><button class="btn grow" data-save="${ex.id}">Save</button><button class="btn ghost" data-cancel="1">Cancel</button></div>
       <div class="row"><button class="btn ghost small" data-addvar="${ex.id}">+ Add alternative exercise</button>
         ${ex.variants.length > 1 ? `<button class="btn danger small" data-delvar="${ex.id}">Remove “${esc(v.name)}”</button>` : ""}
@@ -871,6 +1021,7 @@ function exPanel(day, ex, inRun) {
     <div class="presc" style="align-items:center"><span class="big num grow">${esc(v.sets || "—")}</span>
       <span class="stepper" role="group" aria-label="Number of sets"><button data-step="${ex.id}" data-dir="-1" aria-label="One set fewer">−</button><span>${v.count || 1} set${(v.count || 1) === 1 ? "" : "s"}</span><button data-step="${ex.id}" data-dir="1" aria-label="One set more">+</button></span></div>
     ${v.notes ? `<p class="notes">${esc(v.notes)}</p>` : ""}
+    ${P.videos ? `<a class="video" href="${esc(videoFor(v))}" target="_blank" rel="noopener"><span class="play">▶</span><span><b>Watch how to do it</b><small>${safeUrl(v.video) ? "Your saved video" : "YouTube search · paste a favourite video under Edit"}</small></span></a>` : ""}
     ${live ? setLogHtml(ex, v, rows) : ""}
     <div class="maxbox">
       <span class="label">Working max</span>
@@ -1165,11 +1316,29 @@ function toggleLink(day, exId) {
   cleanGroups(f.sec); save(); render();
 }
 
+function lastWorkoutText(prof) {
+  const st = P && P.id === prof.id ? S : readLocal(prof);
+  if (!st || !st.log || !st.log.length) return "No workouts logged yet";
+  const e = [...st.log].sort((a, b) => (a.date + (a.at || "")).localeCompare(b.date + (b.at || ""))).pop();
+  const d = st.days.find(x => x.id === e.dayId);
+  const ws = dkey(weekStart(new Date()));
+  const n = new Set(st.log.filter(x => x.date >= ws && st.days.some(dd => dd.id === x.dayId && dd.kind === "strength")).map(x => x.dayId)).size;
+  return `Last: ${d ? d.name : ""}, ${fmtDate(e.date)} · ${n}/${st.days.filter(x => x.kind === "strength").length} strength this week`;
+}
+function viewWho() {
+  return `<div class="wrap who">
+    <header class="hero"><span class="label">Home gym</span><h1>Who's training?</h1></header>
+    ${Object.values(PROFILES).map(prof => { const st = readLocal(prof); return `<button class="card person" style="--dc:${prof.color}" data-user="${prof.id}">
+      <span class="av">${esc(prof.name[0])}</span>
+      <span class="meta"><b>${esc(prof.name)}</b><span>${esc(st ? st.title : prof.legacyTitle)}</span><small>${esc(lastWorkoutText(prof))}</small></span><span class="chev">›</span></button>`; }).join("")}
+  </div>`;
+}
 function render() {
-  const r = route();
   const app = document.getElementById("app");
+  if (!P) { app.innerHTML = viewWho(); document.title = "Johann & Pani Training"; return; }
+  const r = route();
   app.innerHTML = r.name === "day" ? viewDay(r) : r.name === "ex" ? viewEx(r) : r.name === "calendar" ? viewCalendar() : r.name === "backup" ? viewBackup() : r.name === "lib" ? viewLib() : r.name === "libex" ? viewLibEx(r) : viewHome();
-  document.title = "AW/26 Training";
+  document.title = `${P.name} · ${S.title}`;
 }
 
 /* ---------- touch gestures on exercise cards ----------
@@ -1308,6 +1477,9 @@ document.addEventListener("click", e => {
   const t = e.target.closest("button, a"); if (!t || t.tagName === "A") return;
   if (Date.now() - swipedAt < 300) { e.preventDefault(); return; }
   const r = route(), day = r.day ? dayById(r.day) : null, d = t.dataset;
+  if (d.user) { loadProfile(d.user); if (location.hash) location.hash = ""; render(); window.scrollTo(0, 0); return; }
+  if (t.id === "switchuser") { signOut(); window.scrollTo(0, 0); return; }
+  if (!P) return;
   if (d.go !== undefined) { go(d.go); return; }
   if (t.id === "edit") { editMode = !editMode; render(); return; }
   if (t.id === "start" && day) { startDay(day); return; }
@@ -1363,6 +1535,7 @@ document.addEventListener("click", e => {
       } }
     { const nm = val("f-mode"); if (nm !== v.mode) { v.mode = nm; if (S.active && S.active.sets) delete S.active.sets[f.ex.id]; } }
     f.ex.label = val("f-label").trim();
+    if (P.videos) { const vid = val("f-video").trim(); v.video = vid && !safeUrl(vid) ? "https://" + vid.replace(/^\w+:\/\//, "") : vid; }
     exEdit = null; save(); render(); toast("Saved"); return;
   }
   if (d.addvar && day) { const f = findEx(day, d.addvar); f.ex.variants.push(V("Alternative exercise", cur(f.ex).sets || "3×10")); exEdit = f.ex.id; f.ex.cur = f.ex.variants.length - 1; save(); render(); const i = document.getElementById("f-name-" + f.ex.id); if (i) { i.focus(); i.select(); } return; }
@@ -1419,10 +1592,10 @@ document.addEventListener("click", e => {
   if (d.dellog) { ask("Remove this workout from the log?", "Remove", () => { S.log = S.log.filter(x => x.id !== d.dellog); save(); render(); }); return; }
   if (t.id === "bk-copy") { const ta = document.getElementById("bk-out"); navigator.clipboard?.writeText(ta.value).then(() => toast("Backup copied"), () => { ta.focus(); ta.select(); toast("Select all and copy"); }) ?? (ta.select(), toast("Select all and copy")); return; }
   if (t.id === "bk-restore") { try { const r2 = JSON.parse(document.getElementById("bk-in").value); if (!r2 || !Array.isArray(r2.days) || !Array.isArray(r2.log)) throw 0; ask("Replace everything on this device with the backup?", "Restore", () => { S = migrate(r2); save(); go(""); toast("Backup restored"); }); } catch { toast("That text isn't a valid backup"); } return; }
-  if (t.id === "reset") { ask("Reset the programme to the original? Your log is kept.", "Reset", () => { const fresh = seed(); fresh.log = S.log; fresh.lib = S.lib; S = migrate(fresh); save(); go(""); toast("Programme reset"); }); return; }
+  if (t.id === "reset") { ask("Reset the programme to the original? Your log is kept.", "Reset", () => { const fresh = P.seed(); fresh.log = S.log; fresh.lib = S.lib; S = migrate(fresh); save(); go(""); toast("Programme reset"); }); return; }
 });
 
-if (migratePending) { S = migrate(S); migratePending = false; persistLocal(); }
+{ let saved = null; try { saved = localStorage.getItem("training.profile"); } catch {} if (saved && PROFILES[saved]) loadProfile(saved); }
 render();
 })();
 </script>
