@@ -2,10 +2,10 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Training">
+<meta name="apple-mobile-web-app-title" content="Fromatipour">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head><body>
-<title>Johann &amp; Pani Training</title>
+<title>Fromatipour Workout</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1327,7 +1327,7 @@ function lastWorkoutText(prof) {
 }
 function viewWho() {
   return `<div class="wrap who">
-    <header class="hero"><span class="label">Home gym</span><h1>Who's training?</h1></header>
+    <header class="hero"><span class="label">Fromatipour Workout</span><h1>Who's training?</h1></header>
     ${Object.values(PROFILES).map(prof => { const st = readLocal(prof); return `<button class="card person" style="--dc:${prof.color}" data-user="${prof.id}">
       <span class="av">${esc(prof.name[0])}</span>
       <span class="meta"><b>${esc(prof.name)}</b><span>${esc(st ? st.title : prof.legacyTitle)}</span><small>${esc(lastWorkoutText(prof))}</small></span><span class="chev">›</span></button>`; }).join("")}
@@ -1335,10 +1335,10 @@ function viewWho() {
 }
 function render() {
   const app = document.getElementById("app");
-  if (!P) { app.innerHTML = viewWho(); document.title = "Johann & Pani Training"; return; }
+  if (!P) { app.innerHTML = viewWho(); document.title = "Fromatipour Workout"; return; }
   const r = route();
   app.innerHTML = r.name === "day" ? viewDay(r) : r.name === "ex" ? viewEx(r) : r.name === "calendar" ? viewCalendar() : r.name === "backup" ? viewBackup() : r.name === "lib" ? viewLib() : r.name === "libex" ? viewLibEx(r) : viewHome();
-  document.title = `${P.name} · ${S.title}`;
+  document.title = `Fromatipour Workout · ${P.name}`;
 }
 
 /* ---------- touch gestures on exercise cards ----------

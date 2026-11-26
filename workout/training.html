@@ -1,4 +1,4 @@
-<title>Johann &amp; Pani Training</title>
+<title>Fromatipour Workout</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1320,7 +1320,7 @@ function lastWorkoutText(prof) {
 }
 function viewWho() {
   return `<div class="wrap who">
-    <header class="hero"><span class="label">Home gym</span><h1>Who's training?</h1></header>
+    <header class="hero"><span class="label">Fromatipour Workout</span><h1>Who's training?</h1></header>
     ${Object.values(PROFILES).map(prof => { const st = readLocal(prof); return `<button class="card person" style="--dc:${prof.color}" data-user="${prof.id}">
       <span class="av">${esc(prof.name[0])}</span>
       <span class="meta"><b>${esc(prof.name)}</b><span>${esc(st ? st.title : prof.legacyTitle)}</span><small>${esc(lastWorkoutText(prof))}</small></span><span class="chev">›</span></button>`; }).join("")}
@@ -1328,10 +1328,10 @@ function viewWho() {
 }
 function render() {
   const app = document.getElementById("app");
-  if (!P) { app.innerHTML = viewWho(); document.title = "Johann & Pani Training"; return; }
+  if (!P) { app.innerHTML = viewWho(); document.title = "Fromatipour Workout"; return; }
   const r = route();
   app.innerHTML = r.name === "day" ? viewDay(r) : r.name === "ex" ? viewEx(r) : r.name === "calendar" ? viewCalendar() : r.name === "backup" ? viewBackup() : r.name === "lib" ? viewLib() : r.name === "libex" ? viewLibEx(r) : viewHome();
-  document.title = `${P.name} · ${S.title}`;
+  document.title = `Fromatipour Workout · ${P.name}`;
 }
 
 /* ---------- touch gestures on exercise cards ----------
