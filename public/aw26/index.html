@@ -247,6 +247,16 @@ h3 { font-size: 1.2rem; }
 .prbadge { display: inline-block; font-size: .66rem; font-weight: 800; letter-spacing: .06em; padding: 1px 6px; border-radius: 6px; background: var(--max); color: #fff; vertical-align: 1px; }
 .hist-entry ul { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: .86rem; color: var(--fg); }
 .hist-entry li span { color: var(--muted); }
+.setrow.tm { grid-template-columns: 22px minmax(0, 1.2fr) minmax(0, 1fr) 44px 48px; }
+.setrow.tm.now { grid-template-columns: 22px minmax(0, 1fr) 44px 48px; }
+.setrow .swt { height: 44px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface); font-size: .9rem; }
+.setrow .swt.run { background: var(--max); border-color: var(--max); color: #fff; }
+.swipe { position: relative; border-radius: var(--r); }
+.swipe-bg { position: absolute; inset: 0; border-radius: var(--r); background: var(--max); color: #fff; display: flex; align-items: center; padding-left: 18px; font-weight: 700; opacity: 0; pointer-events: none; }
+.swipe > .ex { position: relative; touch-action: pan-y; transition: transform .18s ease, border-color .15s; }
+.swipe.dragging > .ex { transition: none; }
+.hint { margin: 0; font-size: .8rem; color: var(--muted); }
+.toast button { margin-left: 10px; border: 0; background: transparent; color: inherit; font-weight: 800; text-decoration: underline; padding: 0; }
 textarea.code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; min-height: 120px; }
 @media (prefers-reduced-motion: no-preference) { .btn, .chip, .set, .ex { transition: background-color .15s, border-color .15s, transform .1s; } .set:active, .btn:active { transform: scale(.97); } }
 </style>
@@ -280,8 +290,9 @@ const fmtDate = (k, opts = { weekday: "short", day: "numeric", month: "short" })
 const guessCount = s => { const m = String(s || "").match(/^\s*(\d+)\s*[×xX]/); if (m) return Math.min(12, +m[1]); const list = String(s || "").match(/^\s*\d+(\s*,\s*\d+)+/); return list ? list[0].split(",").length : 1; };
 const num = v => { const s = String(v ?? "").trim().replace(",", "."); return s === "" ? "" : s; };
 /* ---------- seed: the programme from the Google Doc ---------- */
+function isTimeText(x) { return /\d\s*(s|sec|secs|seconds?|min|mins|minutes?)\b|\d:\d\d/i.test(String(x || "")); }
 function V(name, sets, o = {}) {
-  return { id: uid(), name, sets, count: o.c ?? guessCount(sets), notes: o.n || "", weight: o.w ?? "", reps: o.r ?? "", maxDate: (o.w || o.r) ? today() : "", history: [] };
+  return { id: uid(), name, sets, mode: o.m || (isTimeText(sets) ? "time" : "reps"), count: o.c ?? guessCount(sets), notes: o.n || "", weight: o.w ?? "", reps: o.r ?? "", maxDate: (o.w || o.r) ? today() : "", history: [] };
 }
 function E(...variants) { return { id: uid(), cur: 0, group: null, variants }; }
 function S_(title, items) { return { id: uid(), title, items }; }
@@ -309,7 +320,7 @@ function seed() {
           L("Vertical push", V("Landmine press", "3×10", { w: "15", r: "10" })),
           L("Horizontal pull", V("TRX row", "3×10", { r: "10" })),
           L("Rotation", V("Med ball throws", "3 sets", { w: "20" }), V("Cable woodchop", "3 sets"), V("Pallof press", "3 sets")),
-          L("Grip", V("Farmer's walk", "3 sets", { w: "80" }), V("Hanging", "3 sets"), V("Monkey bars", "3 sets")),
+          L("Grip", V("Farmer's walk", "3 sets", { w: "80" }), V("Hanging", "3×30 s"), V("Monkey bars", "3 sets")),
           face, lat,
         ]),
         stretch(),
@@ -323,7 +334,7 @@ function seed() {
           L("Horizontal pull", V("Meadows row", "3×10", { w: "15", r: "10" })),
           curl, ext,
           L("Lateral flexion", V("Unilateral farmer walk", "3×30 s", { w: "28" })),
-          L("Stability", V("Handstands", "Practice", { c: 1 })),
+          L("Stability", V("Handstands", "10 min", { c: 1, n: "Time practice." })),
         ]),
         stretch(),
       ]},
@@ -370,9 +381,9 @@ function seed() {
           S_("Cardio or sport", [E(
             V("Swim", "30–40 min", { c: 1, n: "Best option." }),
             V("SUP", "40 min", { c: 1, n: "Outstanding for core and proprioception." }),
-            V("Bike", "MTB or commute", { c: 1 }),
+            V("Bike", "MTB or commute", { c: 1, m: "time" }),
             V("Trampoline", "30 min", { c: 1 }),
-            V("Skiing", "Slope, park, off-piste, touring", { c: 1 }),
+            V("Skiing", "Slope, park, off-piste, touring", { c: 1, m: "time" }),
             V("Football", "60 min", { c: 1 }),
             V("Tennis", "60 min", { c: 1 }))]),
           S_("Back decompression", [E(V("Back decompression flow", "~6 min", { c: 1, n: "Cat-cow 2×10 · Child's pose + side reach 60 s/side · Supine knee hug 60 s each leg · Lying spinal twist 60 s/side." }))]),
@@ -465,13 +476,48 @@ function maxText(v) {
   if (r) return isNumR(r) ? `${r} reps` : r;
   return "";
 }
-const setText = s => maxText({ weight: s.w, reps: s.r });
+/* time-based exercises */
+function parseDur(x) {
+  const s = String(x ?? "").trim().toLowerCase().replace(",", ".");
+  if (!s) return null;
+  let m = s.match(/^(\d+):(\d{1,2})(?::(\d{1,2}))?$/);
+  if (m) return m[3] != null ? +m[1] * 3600 + +m[2] * 60 + +m[3] : +m[1] * 60 + +m[2];
+  m = s.match(/^([\d.]+)\s*(m|min|mins|minutes?)$/); if (m) return Math.round(parseFloat(m[1]) * 60);
+  m = s.match(/^([\d.]+)\s*(h|hr|hrs|hours?)$/); if (m) return Math.round(parseFloat(m[1]) * 3600);
+  m = s.match(/^([\d.]+)\s*(s|sec|secs|seconds?)?$/); if (m) return Math.round(parseFloat(m[1]));
+  return null;
+}
+function fmtDur(sec) {
+  if (sec == null || sec === "" || isNaN(sec)) return "";
+  sec = Math.round(+sec); if (sec < 60) return sec + " s";
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), r = sec % 60;
+  if (h) return `${h} h${m ? " " + m + " min" : ""}`;
+  return r ? `${m}:${pad2(r)} min` : `${m} min`;
+}
+const fmtClock = sec => sec == null || sec === "" || isNaN(sec) ? "" : `${Math.floor(sec / 60)}:${pad2(Math.round(sec) % 60)}`;
+const isTime = v => v.mode === "time";
+function targetTime(v) {
+  const m = String(v.sets || "").match(/(\d+(?:[.,]\d+)?)\s*(?:[–-]\s*\d+(?:[.,]\d+)?)?\s*(s|sec|secs|min|mins|minutes?)\b/i);
+  if (!m) return null; const n = parseFloat(m[1].replace(",", "."));
+  return Math.round(/^m/i.test(m[2]) ? n * 60 : n);
+}
+function parseRT(str) { // "5" -> reps, "1:30" / "45 s" / "2 min" -> time
+  const s = String(str || "").trim(); if (!s) return {};
+  if (/:/.test(s) || /\d\s*(s|sec|secs|seconds?|m|min|mins|minutes?|h|hr|hrs|hours?)$/i.test(s)) { const t = parseDur(s); if (t != null) return { t }; }
+  return { r: s };
+}
+const loadText = w => { const p = parseW(w); return p && !(p.bw && !p.kg) ? fmtW(w) : ""; };
+function setText(s) {
+  if (s.t != null && s.t !== "") { const l = loadText(s.w); return (l ? l + " · " : "") + fmtDur(s.t); }
+  return maxText({ weight: s.w, reps: s.r });
+}
 function e1rm(w, r) { const p = parseW(w); if (!p || p.bw || !isNumR(r) || +r < 1 || +r > 12) return ""; return +r === 1 ? p.kg : Math.round(p.kg * (1 + r / 30) * 2) / 2; }
 function targetReps(v) { const m = String(v.sets || "").match(/[×x]\s*(\d+)/); return m ? m[1] : (isNumR(v.reps) ? String(v.reps) : ""); }
 function getSets(exId) { return (S.active && S.active.sets && S.active.sets[exId]) || []; }
 function setsDone(exId) { return getSets(exId).filter(s => s && s.done).length; }
 function setDefault(v, arr, i) {
   const prev = arr[i - 1];
+  if (isTime(v)) return { w: prev ? prev.w : (v.weight || ""), t: prev ? prev.t : targetTime(v), done: false };
   return { w: prev ? prev.w : (v.weight || ""), r: prev ? prev.r : targetReps(v), done: false };
 }
 function liveSets(exId, v) { // what the screen shows: saved sets, filled with defaults up to the set count
@@ -490,30 +536,42 @@ function ensureLib(name) {
   if (!l) { l = { id: uid(), name, prs: [] }; S.lib.push(l); }
   return l;
 }
-const prKey = (w, r) => { const p = parseW(w); return p ? `${p.bw ? "bw" : "kg"}|${String(r).trim()}` : null; };
-function bestFor(l, w, r) {
-  const k = prKey(w, r); if (!k) return null;
-  return l.prs.filter(p => prKey(p.w, p.r) === k).sort((a, b) => parseW(b.w).kg - parseW(a.w).kg)[0] || null;
+const prKind = p => p.t != null && p.t !== "" ? "t" : "r";
+function prKey(p) {
+  const pw = parseW(p.w);
+  if (prKind(p) === "t") return "t|" + (loadText(p.w) || "-");
+  return pw ? `${pw.bw ? "bw" : "kg"}|${String(p.r ?? "").trim()}` : null;
 }
-function beats(l, w, r) {
-  if (!l || !parseW(w) || !String(r || "").trim()) return false;
-  const b = bestFor(l, w, r);
-  return !b || parseW(w).kg > parseW(b.w).kg;
+const prVal = p => prKind(p) === "t" ? +p.t : parseW(p.w).kg;
+function validPR(p) { return prKind(p) === "t" ? +p.t > 0 : !!(parseW(p.w) && isNumR(p.r)); }
+function bestFor(l, p) {
+  const k = prKey(p); if (!k || !l) return null;
+  return l.prs.filter(x => prKey(x) === k).sort((a, b) => prVal(b) - prVal(a))[0] || null;
 }
-function addPR(name, w, r, date) {
-  const l = ensureLib(name); if (!l || !beats(l, w, r)) return false;
-  l.prs.push({ id: uid(), w: String(w).trim(), r: String(r).trim(), date: date || today() });
+function beats(l, p) {
+  if (!l || !validPR(p)) return false;
+  const b = bestFor(l, p);
+  return !b || prVal(p) > prVal(b);
+}
+function addPR(name, p, date) {
+  const l = ensureLib(name); if (!l || !beats(l, p)) return false;
+  const e = { id: uid(), w: String(p.w ?? "").trim(), date: date || today() };
+  if (prKind(p) === "t") e.t = +p.t; else e.r = String(p.r).trim();
+  l.prs.push(e);
   return true;
 }
-function prTable(l) { // best entry per rep count
+function prTable(l) { // best entry per rep count (and per load for timed holds)
   const best = {};
-  l.prs.forEach(p => { const k = prKey(p.w, p.r); if (!k) return; if (!best[k] || parseW(p.w).kg > parseW(best[k].w).kg) best[k] = p; });
-  return Object.values(best).sort((a, b) => (parseInt(a.r) || 999) - (parseInt(b.r) || 999) || String(a.r).localeCompare(String(b.r)) || (parseW(a.w).bw - parseW(b.w).bw));
+  l.prs.forEach(p => { const k = prKey(p); if (!k) return; if (!best[k] || prVal(p) > prVal(best[k])) best[k] = p; });
+  const vals = Object.values(best);
+  const reps = vals.filter(p => prKind(p) === "r").sort((a, b) => (parseInt(a.r) || 999) - (parseInt(b.r) || 999) || String(a.r).localeCompare(String(b.r)) || (parseW(a.w).bw - parseW(b.w).bw));
+  const times = vals.filter(p => prKind(p) === "t").sort((a, b) => (parseW(a.w)?.kg || 0) - (parseW(b.w)?.kg || 0));
+  return reps.concat(times);
 }
 function libSummary(l) {
   const t = prTable(l); if (!t.length) return "";
-  const withE = t.filter(p => e1rm(p.w, p.r));
-  const top = withE.length ? withE.sort((a, b) => e1rm(b.w, b.r) - e1rm(a.w, a.r))[0] : t.sort((a, b) => b.date.localeCompare(a.date))[0];
+  const withE = t.filter(p => prKind(p) === "r" && e1rm(p.w, p.r)), times = t.filter(p => prKind(p) === "t");
+  const top = withE.length ? withE.sort((a, b) => e1rm(b.w, b.r) - e1rm(a.w, a.r))[0] : times.length ? times.sort((a, b) => b.t - a.t)[0] : t.sort((a, b) => b.date.localeCompare(a.date))[0];
   return setText(top);
 }
 function usedIn(name) {
@@ -534,11 +592,16 @@ function migrate(st) {
     st.days.forEach(d => d.sections.forEach(s => s.items.forEach(e => e.variants.forEach(v => {
       if (/^(warm-up|stretch)$/i.test(v.name)) return;
       ensureLib(v.name);
-      if (String(v.weight || "").trim() && String(v.reps || "").trim()) addPR(v.name, v.weight, v.reps, v.maxDate || today());
+      if (String(v.weight || "").trim() || String(v.reps || "").trim()) addPR(v.name, { w: v.weight, ...parseRT(v.reps) }, v.maxDate || today());
     }))));
     S = prev;
   }
   if (st.active && !st.active.sets) st.active.sets = {};
+  st.days.forEach(d => d.sections.forEach(sc => sc.items.forEach(e => e.variants.forEach(v => {
+    if (v.mode) return;
+    if (norm(v.name) === "handstands" && v.sets === "Practice") v.sets = "10 min";
+    v.mode = isTimeText(v.sets) || d.kind === "cardio" || ["handstands", "hanging"].includes(norm(v.name)) ? "time" : "reps";
+  }))));
   return st;
 }
 function wInput(id, value, label = "Weight") {
@@ -583,10 +646,11 @@ function route() {
 function go(h) { if (location.hash.slice(1) === h) render(); else location.hash = h; }
 window.addEventListener("hashchange", () => { exEdit = null; render(); window.scrollTo(0, 0); });
 
-function toast(msg) {
+function toast(msg, actionLabel, action) {
   const el = document.createElement("div"); el.className = "toast"; el.textContent = msg;
+  if (actionLabel) { const b = document.createElement("button"); b.textContent = actionLabel; b.onclick = ev => { ev.stopPropagation(); el.remove(); action(); }; el.appendChild(b); }
   document.querySelectorAll(".toast").forEach(t => t.remove());
-  document.body.appendChild(el); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.remove(), 2200);
+  document.body.appendChild(el); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.remove(), actionLabel ? 6000 : 2200);
 }
 function ask(msg, okLabel, fn, danger = true) {
   const layer = document.getElementById("layer");
@@ -677,6 +741,7 @@ function exRow(day, ex) {
     <span class="sub">${ex.label ? `<span class="cat">${esc(ex.label)}</span> · ` : ""}${esc(v.sets)}${alts}</span><span></span>${bars}</button>`;
 }
 
+const swipeRow = (day, ex) => `<div class="swipe" data-swipe="${ex.id}"><span class="swipe-bg" aria-hidden="true">Delete</span>${exRow(day, ex)}</div>`;
 function viewDay(r) {
   const day = dayById(r.day); if (!day) return viewHome();
   const color = META[day.id].color;
@@ -705,11 +770,11 @@ function viewDay(r) {
           }
         });
       } else if (run.length > 1) {
-        html += `<div class="ss" style="--dc:${color}"><span class="label">Superset · ${run.length} exercises back-to-back</span>${run.map(ex => exRow(day, ex)).join("")}</div>`;
-      } else html += exRow(day, run[0]);
+        html += `<div class="ss" style="--dc:${color}"><span class="label">Superset · ${run.length} exercises back-to-back</span>${run.map(ex => swipeRow(day, ex)).join("")}</div>`;
+      } else html += swipeRow(day, run[0]);
       i += run.length;
     }
-    if (editMode) html += `<button class="add" data-add="${sec.id}">+ Add exercise to ${esc(sec.title)}</button>`;
+    html += `<button class="add" data-add="${sec.id}">+ Add exercise</button>`;
     return html + "</div></section>";
   }).join("");
   return `<div class="wrap">
@@ -717,11 +782,58 @@ function viewDay(r) {
       <button class="iconbtn ${editMode ? "on" : ""}" id="edit">${editMode ? "Done" : "Edit"}</button></div>
     ${head}
     ${day.guide && day.guide.length ? `<details class="card pad guide"><summary>Ski &amp; sports rules</summary><dl>${day.guide.map(([t, d]) => `<dt>${esc(t)}</dt><dd>${esc(d)}</dd>`).join("")}</dl></details>` : ""}
+    ${editMode ? "" : `<p class="hint">Swipe an exercise to the right to delete it.</p>`}
     ${editMode ? `<p class="notes">Reorder with the arrows. Link two neighbouring exercises to do them as a superset. Tap an exercise and use ⇄ Swap to change it, or Edit to rename it, change sets or add alternatives. New exercises can come from your exercise database.</p>` : ""}
     ${secs}
   </div>${tabs("home")}`;
 }
 
+let swRun = null, swInt = null;
+const swElapsed = () => swRun ? Math.floor((Date.now() - swRun.start) / 1000) : 0;
+function setLogHtml(ex, v, rows) {
+  const wInp = (st, i) => `<div class="wt"><button type="button" class="bw ${parseW(st.w)?.bw ? "on" : ""}" data-bwt="sw-${ex.id}-${i}" aria-pressed="${!!parseW(st.w)?.bw}">BW</button><input id="sw-${ex.id}-${i}" data-sx="${ex.id}" data-si="${i}" inputmode="decimal" aria-label="Set ${i + 1} weight" value="${esc(parseW(st.w) ? (parseW(st.w).bw ? (parseW(st.w).kg || "") : parseW(st.w).kg) : (st.w || ""))}" placeholder="${parseW(st.w)?.bw ? "+ kg" : "kg"}"></div>`;
+  if (isTime(v)) {
+    const showW = !!loadText(v.weight);
+    return `<div class="setlog"><span class="label">Log your sets · time (m:ss), ▶ to time it, then ✓</span>
+      ${rows.map((st, i) => { const run = swRun && swRun.exId === ex.id && swRun.i === i; return `<div class="setrow tm ${showW ? "" : "now"} ${st.done ? "done" : ""}"><span class="ix">${i + 1}</span>
+        ${showW ? wInp(st, i) : ""}
+        <input id="st-${ex.id}-${i}" data-sx="${ex.id}" data-si="${i}" aria-label="Set ${i + 1} time" value="${esc(run ? fmtClock(swElapsed()) : fmtClock(st.t))}" placeholder="m:ss">
+        <button class="swt ${run ? "run" : ""}" data-swt="${ex.id}" data-i="${i}" aria-label="${run ? "Stop" : "Start"} stopwatch for set ${i + 1}">${run ? "■" : "▶"}</button>
+        <button class="chk" data-chk="${ex.id}" data-i="${i}" aria-label="Set ${i + 1} done">✓</button></div>`; }).join("")}</div>`;
+  }
+  return `<div class="setlog"><span class="label">Log your sets · weight × reps, then ✓</span>
+    ${rows.map((st, i) => `<div class="setrow ${st.done ? "done" : ""}"><span class="ix">${i + 1}</span>
+      ${wInp(st, i)}
+      <span class="x">×</span><input id="sr-${ex.id}-${i}" data-sx="${ex.id}" data-si="${i}" aria-label="Set ${i + 1} reps" value="${esc(st.r)}" placeholder="reps">
+      <button class="chk" data-chk="${ex.id}" data-i="${i}" aria-label="Set ${i + 1} done">✓</button></div>`).join("")}</div>`;
+}
+function tickSw() {
+  if (!swRun) return;
+  const el = document.getElementById(`st-${swRun.exId}-${swRun.i}`), e = swElapsed();
+  if (el) el.value = fmtClock(e);
+  if (swRun.target && e >= swRun.target && !swRun.hit) { swRun.hit = true; try { navigator.vibrate && navigator.vibrate([150, 80, 150]); } catch {} toast("Target time reached"); }
+}
+function startRest() { if (!timerInt) { timerEnd = Date.now() + 90000; timerInt = setInterval(tickTimer, 250); } }
+function stopSw(markDone) {
+  if (!swRun) return null;
+  const { exId, i } = swRun, secs = swElapsed();
+  clearInterval(swInt); swInt = null; swRun = null;
+  const arr = updSet(exId, i); if (!arr[i]) return null;
+  arr[i].t = secs; arr[i].touched = true; if (markDone) arr[i].done = true;
+  S.active.sets[exId] = arr; save();
+  return arr[i];
+}
+function deleteEx(exId) {
+  const day = dayById(route().day); if (!day) return;
+  const f = findEx(day, exId); if (!f) return;
+  const groups = f.sec.items.map(e => [e.id, e.group]), name = cur(f.ex).name, idx = f.i, sec = f.sec, ex = f.ex;
+  sec.items.splice(idx, 1); cleanGroups(sec); save(); render();
+  toast(`${name} deleted`, "Undo", () => {
+    sec.items.splice(Math.min(idx, sec.items.length), 0, ex);
+    const g = Object.fromEntries(groups); sec.items.forEach(e => { if (e.id in g) e.group = g[e.id]; });
+    save(); render();
+  });
+}
 function exPanel(day, ex, inRun) {
   const v = cur(ex), live = S.active && S.active.dayId === day.id, done = setsDone(ex.id), mt = maxText(v);
   const editing = exEdit === ex.id;
@@ -733,6 +845,7 @@ function exPanel(day, ex, inRun) {
       <div class="field"><label for="f-label-${ex.id}">Movement (e.g. Horizontal push)</label><input id="f-label-${ex.id}" value="${esc(ex.label || "")}"></div>
       <div class="field"><label for="f-name-${ex.id}">Exercise name</label><input id="f-name-${ex.id}" value="${esc(v.name)}"></div>
       <div class="row"><div class="field"><label for="f-sets-${ex.id}">Sets × reps</label><input id="f-sets-${ex.id}" value="${esc(v.sets)}" placeholder="3×10"></div>
+        <div class="field" style="max-width:130px"><label for="f-mode-${ex.id}">Logged as</label><select id="f-mode-${ex.id}"><option value="reps" ${isTime(v) ? "" : "selected"}>Weight × reps</option><option value="time" ${isTime(v) ? "selected" : ""}>Time</option></select></div>
         <div class="field" style="max-width:110px"><label for="f-count-${ex.id}">Number of sets</label><input id="f-count-${ex.id}" type="number" min="1" max="12" inputmode="numeric" value="${esc(v.count || 1)}"></div></div>
       <div class="field"><label for="f-notes-${ex.id}">Notes and cues</label><textarea id="f-notes-${ex.id}">${esc(v.notes)}</textarea></div>
       <div class="row"><button class="btn grow" data-save="${ex.id}">Save</button><button class="btn ghost" data-cancel="1">Cancel</button></div>
@@ -749,25 +862,21 @@ function exPanel(day, ex, inRun) {
     <div class="presc" style="align-items:center"><span class="big num grow">${esc(v.sets || "—")}</span>
       <span class="stepper" role="group" aria-label="Number of sets"><button data-step="${ex.id}" data-dir="-1" aria-label="One set fewer">−</button><span>${v.count || 1} set${(v.count || 1) === 1 ? "" : "s"}</span><button data-step="${ex.id}" data-dir="1" aria-label="One set more">+</button></span></div>
     ${v.notes ? `<p class="notes">${esc(v.notes)}</p>` : ""}
-    ${live ? `<div class="setlog"><span class="label">Log your sets · weight × reps, then ✓</span>
-      ${rows.map((st, i) => `<div class="setrow ${st.done ? "done" : ""}"><span class="ix">${i + 1}</span>
-        <div class="wt"><button type="button" class="bw ${parseW(st.w)?.bw ? "on" : ""}" data-bwt="sw-${ex.id}-${i}" aria-pressed="${!!parseW(st.w)?.bw}">BW</button><input id="sw-${ex.id}-${i}" data-sx="${ex.id}" data-si="${i}" inputmode="decimal" aria-label="Set ${i + 1} weight" value="${esc(parseW(st.w) ? (parseW(st.w).bw ? (parseW(st.w).kg || "") : parseW(st.w).kg) : st.w)}" placeholder="${parseW(st.w)?.bw ? "+ kg" : "kg"}"></div>
-        <span class="x">×</span><input id="sr-${ex.id}-${i}" data-sx="${ex.id}" data-si="${i}" aria-label="Set ${i + 1} reps" value="${esc(st.r)}" placeholder="reps">
-        <button class="chk" data-chk="${ex.id}" data-i="${i}" aria-label="Set ${i + 1} done">${st.done ? "✓" : "✓"}</button></div>`).join("")}</div>` : ""}
+    ${live ? setLogHtml(ex, v, rows) : ""}
     <div class="maxbox">
       <span class="label">Working max</span>
       <div class="val">${mt ? esc(mt) : "Not set yet"}</div>
       ${v.maxDate ? `<span class="hist">Since ${esc(fmtDate(v.maxDate, { day: "numeric", month: "short", year: "numeric" }))}</span>` : ""}
       <div class="row">
         ${wInput("mw-" + ex.id, v.weight, "Weight (kg)")}
-        <div class="field" style="max-width:120px"><label for="mr-${ex.id}">Reps</label><input id="mr-${ex.id}" value="${esc(v.reps)}" placeholder="reps"></div>
+        <div class="field" style="max-width:120px"><label for="mr-${ex.id}">${isTime(v) ? "Time" : "Reps"}</label><input id="mr-${ex.id}" value="${esc(v.reps)}" placeholder="${isTime(v) ? "e.g. 1:30" : "reps"}"></div>
       </div>
       <button class="btn" style="background:var(--max);color:#fff" data-max="${ex.id}">Update max</button>
       ${hist.length ? `<div class="hist"><span class="label" style="color:var(--muted)">Earlier</span>${hist.map(h => `<span class="num">${esc(maxText(h) || "—")} · ${esc(fmtDate(h.date, { day: "numeric", month: "short", year: "2-digit" }))}</span>`).join("")}</div>` : ""}
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div class="row"><span class="label grow">Personal records</span>${lib ? `<button class="btn ghost small" data-go="lib-${lib.id}">All PRs →</button>` : ""}</div>
-      ${prs.length ? `<div style="overflow-x:auto"><table class="prt"><thead><tr><th>Reps</th><th>Best</th><th>Date</th></tr></thead><tbody>${prs.map(p => `<tr><td>${esc(p.r)}</td><td class="w">${esc(fmtW(p.w))}</td><td class="d">${esc(fmtDate(p.date, { day: "numeric", month: "short", year: "2-digit" }))}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted" style="margin:0;font-size:.88rem">No PRs yet. Finish a workout or log one in Exercises.</p>`}
+      ${prs.length ? `<div style="overflow-x:auto"><table class="prt"><thead><tr><th>Reps / load</th><th>Best</th><th>Date</th></tr></thead><tbody>${prs.map(p => `<tr><td>${prKind(p) === "t" ? esc(loadText(p.w) || "—") : esc(p.r) + " reps"}</td><td class="w">${esc(prKind(p) === "t" ? fmtDur(p.t) : fmtW(p.w))}</td><td class="d">${esc(fmtDate(p.date, { day: "numeric", month: "short", year: "2-digit" }))}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted" style="margin:0;font-size:.88rem">No PRs yet. Finish a workout or log one in Exercises.</p>`}
     </div>
   </article>`;
 }
@@ -881,14 +990,15 @@ function viewLibEx(r) {
     ${u.length ? `<div class="chips">${u.map(x => `<button class="chip on" style="--dc:${META[x.day.id].color}" data-go="ex-${x.day.id}-${x.ex.id}">${esc(x.day.name)}</button>`).join("")}</div>` : `<p class="muted" style="margin:0">Not in the programme right now.</p>`}
     <section class="card pad" style="display:flex;flex-direction:column;gap:10px">
       <h3>Best by reps</h3>
-      ${table.length ? `<div style="overflow-x:auto"><table class="prt"><thead><tr><th>Reps</th><th>Weight</th><th>Est. 1RM</th><th>Date</th></tr></thead><tbody>${table.map(p => `<tr><td>${esc(p.r)}</td><td class="w">${esc(fmtW(p.w))}</td><td>${e1rm(p.w, p.r) ? e1rm(p.w, p.r) + " kg" : "—"}</td><td class="d">${esc(fmtDate(p.date, { day: "numeric", month: "short", year: "2-digit" }))}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted" style="margin:0">No PRs yet.</p>`}
+      ${table.filter(p => prKind(p) === "r").length ? `<div style="overflow-x:auto"><table class="prt"><thead><tr><th>Reps</th><th>Weight</th><th>Est. 1RM</th><th>Date</th></tr></thead><tbody>${table.filter(p => prKind(p) === "r").map(p => `<tr><td>${esc(p.r)}</td><td class="w">${esc(fmtW(p.w))}</td><td>${e1rm(p.w, p.r) ? e1rm(p.w, p.r) + " kg" : "—"}</td><td class="d">${esc(fmtDate(p.date, { day: "numeric", month: "short", year: "2-digit" }))}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted" style="margin:0">No rep PRs yet.</p>`}
+      ${table.filter(p => prKind(p) === "t").length ? `<h3 style="margin-top:6px">Best times</h3><div style="overflow-x:auto"><table class="prt"><thead><tr><th>Load</th><th>Time</th><th>Date</th></tr></thead><tbody>${table.filter(p => prKind(p) === "t").map(p => `<tr><td>${esc(loadText(p.w) || "—")}</td><td class="w">${esc(fmtDur(p.t))}</td><td class="d">${esc(fmtDate(p.date, { day: "numeric", month: "short", year: "2-digit" }))}</td></tr>`).join("")}</tbody></table></div>` : ""}
     </section>
     <section class="card pad" style="display:flex;flex-direction:column;gap:10px">
       <h3>Log a PR</h3>
-      <div class="row">${wInput("pw", "", "Weight (kg)")}<div class="field" style="max-width:110px"><label for="pr">Reps</label><input id="pr" inputmode="numeric" placeholder="reps"></div></div>
+      <div class="row">${wInput("pw", "", "Weight (kg)")}<div class="field" style="max-width:130px"><label for="pr">Reps or time</label><input id="pr" placeholder="5 or 1:30"></div></div>
       <div class="field"><label for="pd">Date</label><input id="pd" type="date" value="${today()}"></div>
       <button class="btn" style="background:var(--max);color:#fff" id="addpr" data-id="${l.id}">Save PR</button>
-      <p class="muted" style="margin:0;font-size:.84rem">Tap BW for bodyweight. Add kg next to it for extra load (or a minus number for assistance).</p>
+      <p class="muted" style="margin:0;font-size:.84rem">Tap BW for bodyweight. Add kg next to it for extra load (or a minus number for assistance). For timed exercises, enter a time like 45 s or 1:30; weight is optional.</p>
     </section>
     ${all.length ? `<section class="card pad" style="display:flex;flex-direction:column;gap:6px"><h3>PR history</h3><div style="overflow-x:auto"><table class="prt"><tbody>${all.map(p => `<tr><td class="w">${esc(setText(p))}</td><td class="d">${esc(fmtDate(p.date, { day: "numeric", month: "short", year: "numeric" }))}</td><td style="text-align:right"><button data-delpr="${p.id}" data-id="${l.id}" aria-label="Delete PR">✕</button></td></tr>`).join("")}</tbody></table></div></section>` : ""}
     ${sessions.length ? `<section class="section"><span class="label">Recent sessions</span>${sessions.slice(0, 8).map(({ e, it }) => `<div class="card pad" style="padding:12px 14px"><b>${esc(fmtDate(e.date, { weekday: "short", day: "numeric", month: "short" }))}</b> <span class="muted">${esc(dayById(e.dayId)?.name || "")}</span><div class="num" style="font-size:.88rem">${esc(it.sets.map(setText).join(" · "))}</div></div>`).join("")}</section>` : ""}
@@ -907,12 +1017,13 @@ function addExerciseSheet(day, sec) {
   sheet(`<h3>Add exercise to ${esc(day.name)} · ${esc(sec.title)}</h3>
     <div class="field"><label for="addname">Exercise</label><input id="addname" list="libnames" placeholder="Pick from your database or type a new name" autocomplete="off"></div>
     <datalist id="libnames">${[...S.lib].sort((a, b) => a.name.localeCompare(b.name)).map(l => `<option value="${esc(l.name)}"></option>`).join("")}</datalist>
-    <div class="row"><div class="field"><label for="addsets">Sets × reps</label><input id="addsets" value="3×10"></div><div class="field"><label for="addlabel">Movement (optional)</label><input id="addlabel" placeholder="e.g. Hip hinge"></div></div>
+    <div class="row"><div class="field"><label for="addsets">Sets × reps or time</label><input id="addsets" value="3×10" placeholder="3×10 or 3×30 s"></div><div class="field"><label for="addlabel">Movement (optional)</label><input id="addlabel" placeholder="e.g. Hip hinge"></div></div>
+    <div class="field"><label for="addmode">Logged as</label><select id="addmode" data-modefor="addsets"><option value="reps">Weight × reps</option><option value="time">Time</option></select></div>
     <div class="row"><button class="btn ghost grow" data-close="1">Cancel</button><button class="btn grow" id="addgo">Add</button></div>`, layer => {
     const i = layer.querySelector("#addname"); i.focus();
     layer.querySelector("#addgo").onclick = () => {
       const name = i.value.trim(); if (!name) { i.focus(); return; }
-      const ex = E(V(name, layer.querySelector("#addsets").value.trim() || "3×10"));
+      const ex = E(V(name, layer.querySelector("#addsets").value.trim() || "3×10", { m: layer.querySelector("#addmode").value }));
       ex.label = layer.querySelector("#addlabel").value.trim();
       const l = libByName(name); if (l) ex.variants[0].name = l.name; else ensureLib(name);
       sec.items.push(ex); save(); closeSheet(); toast(`${ex.variants[0].name} added`); go(`ex-${day.id}-${ex.id}`);
@@ -925,7 +1036,8 @@ function swapSheet(day, ex) {
   sheet(`<h3>Swap ${esc(v.name)}</h3>
     <div class="field"><label for="swname">New exercise</label><input id="swname" list="swnames" placeholder="Pick from your database or type a new name" autocomplete="off"></div>
     <datalist id="swnames">${[...S.lib].sort((a, b) => a.name.localeCompare(b.name)).filter(l => norm(l.name) !== norm(v.name)).map(l => `<option value="${esc(l.name)}"></option>`).join("")}</datalist>
-    <div class="row"><div class="field"><label for="swsets">Sets × reps</label><input id="swsets" value="${esc(v.sets)}"></div><div class="field"><label for="swlabel">Movement</label><input id="swlabel" value="${esc(ex.label || "")}"></div></div>
+    <div class="row"><div class="field"><label for="swsets">Sets × reps or time</label><input id="swsets" value="${esc(v.sets)}"></div><div class="field"><label for="swlabel">Movement</label><input id="swlabel" value="${esc(ex.label || "")}"></div></div>
+    <div class="field"><label for="swmode">Logged as</label><select id="swmode" data-modefor="swsets"><option value="reps" ${isTime(v) ? "" : "selected"}>Weight × reps</option><option value="time" ${isTime(v) ? "selected" : ""}>Time</option></select></div>
     <button class="btn" id="swreplace">Replace ${esc(v.name)}</button>
     <button class="btn ghost" id="swalt">Add as an alternative (keep ${esc(v.name)})</button>
     <button class="btn ghost" data-close="1">Cancel</button>
@@ -934,9 +1046,9 @@ function swapSheet(day, ex) {
     const apply = mode => {
       const raw = i.value.trim(); if (!raw) { i.focus(); toast("Pick or type an exercise"); return; }
       const l = ensureLib(raw), name = l.name, sets = layer.querySelector("#swsets").value.trim() || v.sets;
-      const nv = V(name, sets);
+      const nv = V(name, sets, { m: layer.querySelector("#swmode").value });
       const tr = targetReps(nv), best = (tr ? l.prs.filter(p => String(p.r) === tr).sort((a, b) => parseW(b.w).kg - parseW(a.w).kg)[0] : null) || [...l.prs].sort((a, b) => b.date.localeCompare(a.date))[0];
-      if (best) { nv.weight = best.w; nv.reps = best.r; nv.maxDate = best.date; } else nv.maxDate = "";
+      if (best) { nv.weight = best.w; nv.reps = best.t != null ? fmtDur(best.t) : best.r; nv.maxDate = best.date; } else nv.maxDate = "";
       if (mode === "replace") ex.variants[ex.cur || 0] = nv; else { ex.variants.push(nv); ex.cur = ex.variants.length - 1; }
       ex.label = layer.querySelector("#swlabel").value.trim();
       if (S.active && S.active.sets) delete S.active.sets[ex.id];
@@ -979,16 +1091,22 @@ function startDay(day, date) {
 function logEntry(dayId, date, items) {
   S.log.push({ id: uid(), date, dayId, at: new Date().toISOString(), items: items || [] });
 }
+function prToast(day, exId, st) {
+  if (!st) return; const v = cur(findEx(day, exId).ex);
+  const x = isTime(v) ? { w: st.w || "", t: st.t } : { w: st.w, r: st.r };
+  if (beats(libByName(v.name), x)) toast(`New PR: ${setText(x)} 🏆`);
+}
 function finishDay(day) {
+  if (swRun) stopSw(true);
   const date = S.active.date || today();
   let prCount = 0;
   const items = allEx(day).filter(e => setsDone(e.id) > 0).map(e => {
-    const v = cur(e), sets = getSets(e.id).filter(x => x && x.done).map(x => ({ w: x.w, r: x.r }));
+    const v = cur(e), sets = getSets(e.id).filter(x => x && x.done).map(x => isTime(v) ? { w: x.w || "", t: x.t } : { w: x.w, r: x.r });
     const prs = [];
-    // best set per rep count goes to the exercise database if it beats the record
+    // best set per rep count (or per load for timed sets) goes to the exercise database if it beats the record
     const best = {};
-    sets.forEach(x => { const k = prKey(x.w, x.r); if (k && String(x.r).trim() && (!best[k] || parseW(x.w).kg > parseW(best[k].w).kg)) best[k] = x; });
-    Object.values(best).forEach(x => { if (addPR(v.name, x.w, x.r, date)) prs.push(setText(x)); });
+    sets.forEach(x => { if (!validPR(x)) return; const k = prKey(x); if (!best[k] || prVal(x) > prVal(best[k])) best[k] = x; });
+    Object.values(best).forEach(x => { if (addPR(v.name, x, date)) prs.push(setText(x)); });
     prCount += prs.length;
     return { name: v.name, label: e.label || "", sets, prs };
   });
@@ -1033,6 +1151,32 @@ function render() {
   document.title = "AW/26 Training";
 }
 
+let drag = null, swipedAt = 0;
+document.addEventListener("pointerdown", e => {
+  const w = e.target.closest && e.target.closest(".swipe"); if (!w || e.button) return;
+  drag = { w, el: w.querySelector(".ex"), bg: w.querySelector(".swipe-bg"), x: e.clientX, y: e.clientY, dx: 0, on: false, id: e.pointerId };
+});
+document.addEventListener("pointermove", e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!drag.on) {
+    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag = null; return; }
+    if (dx > 10 && dx > Math.abs(dy)) { drag.on = true; drag.w.classList.add("dragging"); try { drag.w.setPointerCapture(e.pointerId); } catch {} } else return;
+  }
+  drag.dx = Math.max(0, dx);
+  drag.el.style.transform = `translateX(${drag.dx}px)`;
+  drag.bg.style.opacity = Math.min(1, drag.dx / 80);
+});
+function endDrag() {
+  if (!drag) return; const d = drag; drag = null; if (!d.on) return;
+  swipedAt = Date.now(); d.w.classList.remove("dragging");
+  const W = d.w.offsetWidth;
+  if (d.dx > W * 0.35) { d.el.style.transform = `translateX(${W}px)`; setTimeout(() => deleteEx(d.w.dataset.swipe), 170); }
+  else { d.el.style.transform = ""; d.bg.style.opacity = 0; }
+}
+document.addEventListener("pointerup", endDrag);
+document.addEventListener("pointercancel", endDrag);
+
 function updSet(exId, i) { // read a set row's inputs into the session
   if (!S.active) return [];
   S.active.sets = S.active.sets || {};
@@ -1041,14 +1185,17 @@ function updSet(exId, i) { // read a set row's inputs into the session
   const wEl = document.getElementById(`sw-${exId}-${i}`), rEl = document.getElementById(`sr-${exId}-${i}`);
   if (wEl) arr[i].w = readW(`sw-${exId}-${i}`);
   if (rEl) arr[i].r = rEl.value.trim();
+  const tEl = document.getElementById(`st-${exId}-${i}`);
+  if (tEl && !(swRun && swRun.exId === exId && swRun.i === i)) arr[i].t = parseDur(tEl.value);
   arr[i].touched = true;
   // later sets you haven't touched follow this one
   for (let j = i + 1; j < arr.length; j++) {
     if (arr[j].done || arr[j].touched) continue;
-    arr[j].w = arr[i].w; arr[j].r = arr[i].r;
+    arr[j].w = arr[i].w; if ("r" in arr[i]) arr[j].r = arr[i].r; if ("t" in arr[i]) arr[j].t = arr[i].t;
+    const t2 = document.getElementById(`st-${exId}-${j}`); if (t2) t2.value = fmtClock(arr[j].t);
     const w2 = document.getElementById(`sw-${exId}-${j}`), r2 = document.getElementById(`sr-${exId}-${j}`), p = parseW(arr[j].w);
     if (w2) { w2.value = p ? (p.bw ? (p.kg || "") : p.kg) : arr[j].w; const bt = w2.previousElementSibling; bt.classList.toggle("on", !!(p && p.bw)); w2.placeholder = p && p.bw ? "+ kg" : "kg"; }
-    if (r2) r2.value = arr[j].r;
+    if (r2) r2.value = arr[j].r ?? "";
   }
   S.active.sets[exId] = arr; save();
   return arr;
@@ -1056,6 +1203,7 @@ function updSet(exId, i) { // read a set row's inputs into the session
 document.addEventListener("input", e => {
   const t = e.target;
   if (t.dataset && t.dataset.sx) { updSet(t.dataset.sx, +t.dataset.si); return; }
+  if (t.id === "addsets" || t.id === "swsets") { const sel = document.querySelector(`[data-modefor="${t.id}"]`); if (sel) sel.value = isTimeText(t.value) ? "time" : "reps"; }
   if (t.id === "libq") {
     libQuery = t.value; const q = norm(t.value);
     document.querySelectorAll("#liblist [data-name]").forEach(b => { b.hidden = q && !b.dataset.name.includes(q); });
@@ -1065,13 +1213,14 @@ document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.cl
 
 document.addEventListener("click", e => {
   const t = e.target.closest("button, a"); if (!t || t.tagName === "A") return;
+  if (Date.now() - swipedAt < 450) { e.preventDefault(); return; }
   const r = route(), day = r.day ? dayById(r.day) : null, d = t.dataset;
   if (d.go !== undefined) { go(d.go); return; }
   if (t.id === "edit") { editMode = !editMode; render(); return; }
   if (t.id === "start" && day) { startDay(day); return; }
   if (t.id === "quicklog" && day) { logEntry(day.id, today(), day.kind === "cardio" ? [{ name: cur(day.sections[0].items[0]).name }] : []); save(); toast(`${day.name} logged for today`); calSel = today(); calMonth = null; go("calendar"); return; }
   if (t.id === "finish" && day) { const any = allEx(day).some(x => setsDone(x.id)); if (any) finishDay(day); else ask("No sets ticked yet. Log the workout anyway?", "Log it", () => finishDay(day), false); return; }
-  if (t.id === "discard" && day) { ask("Discard this workout? Nothing will be logged.", "Discard", () => { S.active = null; save(); render(); }); return; }
+  if (t.id === "discard" && day) { ask("Discard this workout? Nothing will be logged.", "Discard", () => { clearInterval(swInt); swRun = null; S.active = null; save(); render(); }); return; }
   if (d.mv && day) { moveEx(day, d.mv, +d.dir); return; }
   if (d.link && day) { toggleLink(day, d.link); return; }
   if (d.add && day) { addExerciseSheet(day, day.sections.find(s => s.id === d.add)); return; }
@@ -1087,14 +1236,21 @@ document.addEventListener("click", e => {
     save(); render(); return;
   }
   if (d.chk && day && S.active) {
-    const i = +d.i, arr = updSet(d.chk, i), st = arr[i];
+    const i = +d.i;
+    if (swRun && swRun.exId === d.chk && swRun.i === i) { const st = stopSw(true); render(); prToast(day, d.chk, st); startRest(); render(); return; }
+    const arr = updSet(d.chk, i), st = arr[i];
     st.done = !st.done; save(); render();
-    if (st.done) {
-      const v = cur(findEx(day, d.chk).ex);
-      if (String(st.r).trim() && parseW(st.w) && beats(libByName(v.name), st.w, st.r)) toast(`New PR: ${setText(st)} 🏆`);
-      if (!timerInt) { timerEnd = Date.now() + 90000; timerInt = setInterval(tickTimer, 250); render(); }
-    }
+    if (st.done) { prToast(day, d.chk, st); startRest(); render(); }
     return;
+  }
+  if (d.swt && day && S.active) {
+    const i = +d.i;
+    if (swRun && swRun.exId === d.swt && swRun.i === i) { const st = stopSw(true); render(); prToast(day, d.swt, st); startRest(); render(); return; }
+    if (swRun) stopSw(false);
+    const arr = liveSets(d.swt, cur(findEx(day, d.swt).ex));
+    swRun = { exId: d.swt, i, start: Date.now(), target: arr[i] && arr[i].t, hit: false };
+    clearInterval(timerInt); timerInt = null; timerEnd = 0;
+    swInt = setInterval(tickSw, 250); render(); return;
   }
   if (d.var && day) { const f = findEx(day, d.var); f.ex.cur = +d.i; save(); render(); return; }
   if (d.editex) { exEdit = d.editex; render(); return; }
@@ -1104,6 +1260,7 @@ document.addEventListener("click", e => {
     const f = findEx(day, d.save), v = cur(f.ex), val = id => document.getElementById(id + "-" + f.ex.id).value;
     v.name = val("f-name").trim() || v.name; v.sets = val("f-sets").trim(); { const l = ensureLib(v.name); if (l) v.name = l.name; }
     v.count = Math.max(1, Math.min(12, parseInt(val("f-count"), 10) || 1)); v.notes = val("f-notes").trim();
+    { const nm = val("f-mode"); if (nm !== v.mode) { v.mode = nm; if (S.active && S.active.sets) delete S.active.sets[f.ex.id]; } }
     f.ex.label = val("f-label").trim();
     exEdit = null; save(); render(); toast("Saved"); return;
   }
@@ -1116,7 +1273,7 @@ document.addEventListener("click", e => {
     if (w === String(v.weight || "") && rp === String(v.reps || "")) { toast("Max unchanged"); return; }
     if (v.weight || v.reps) (v.history = v.history || []).push({ weight: v.weight, reps: v.reps, date: v.maxDate || today() });
     v.weight = w; v.reps = rp; v.maxDate = today();
-    const pr = w && rp && addPR(v.name, w, rp, today());
+    const pr = addPR(v.name, { w, ...parseRT(rp) }, today());
     save(); render(); toast(pr ? "New max and PR saved 🏆" : "Max saved 💪"); return;
   }
   if (d.rest !== undefined) { clearInterval(timerInt); timerInt = null; timerEnd = +d.rest ? Date.now() + d.rest * 1000 : 0; if (timerEnd) timerInt = setInterval(tickTimer, 250); render(); return; }
@@ -1146,12 +1303,13 @@ document.addEventListener("click", e => {
     return;
   }
   if (t.id === "addpr") {
-    const l = S.lib.find(x => x.id === d.id), w = readW("pw"), rp = document.getElementById("pr").value.trim(), dt = document.getElementById("pd").value || today();
-    if (!w || !rp) { toast("Enter a weight (or BW) and reps"); return; }
-    const p = parseW(w); if (!p) { toast("Weight should be a number, or BW"); return; }
-    const best = bestFor(l, w, rp);
-    l.prs.push({ id: uid(), w, r: rp, date: dt }); save(); render();
-    toast(!best || p.kg > parseW(best.w).kg ? `PR saved: ${setText({ w, r: rp })} 🏆` : `Saved. Your best at ${rp} reps is still ${fmtW(best.w)}`);
+    const l = S.lib.find(x => x.id === d.id), w = readW("pw"), rt = parseRT(document.getElementById("pr").value), dt = document.getElementById("pd").value || today();
+    const entry = { w, ...rt };
+    if (rt.t == null && !(parseW(w) && isNumR(rt.r))) { toast("Enter a weight (or BW) and reps, or a time like 1:30"); return; }
+    const best = bestFor(l, entry), isPR = !best || prVal(entry) > prVal(best);
+    const e2 = { id: uid(), w, date: dt }; if (rt.t != null) e2.t = rt.t; else e2.r = rt.r;
+    l.prs.push(e2); save(); render();
+    toast(isPR ? `PR saved: ${setText(entry)} 🏆` : `Saved. Your best is still ${setText(best)}`);
     return;
   }
   if (d.delpr) { const l = S.lib.find(x => x.id === d.id); ask("Delete this PR entry?", "Delete", () => { l.prs = l.prs.filter(p => p.id !== d.delpr); save(); render(); }); return; }
