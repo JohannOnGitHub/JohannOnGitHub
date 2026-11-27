@@ -46,6 +46,8 @@ export type SkiDay = Rec & {
   photos?: { id: string; url: string }[]
 }
 
+export type DayKind = 'ski' | 'travel' | 'rest' | 'off'
+
 export type Trip = Rec & {
   name: string
   resortId: string | null
@@ -56,6 +58,7 @@ export type Trip = Rec & {
   travelChoice: string // chosen travel option id, or ''
   plan: string // free text: bookings, times, who
   checklist: Record<string, boolean>
+  dayTypes?: Record<string, DayKind> // per date; missing means a ski day
   source?: string // e.g. "Trips Calendar" when copied from there
   bookings?: string[] // booked items and costs from the source
 }
@@ -87,6 +90,17 @@ export type Profile = Rec & {
   maxSpeed?: { kmh: number | null; place: string; date: string }
   bestTrick?: { name: string; place: string; date: string }
   achievements?: { id: string; title: string; date: string; note: string }[]
+  injuries?: Injury[]
+}
+
+export type Injury = {
+  id: string
+  date: string
+  what: string // e.g. "Torn ACL"
+  body: string // body part
+  where: string // resort or place
+  status: 'recovering' | 'healed' | 'ongoing'
+  notes: string // cause, treatment, what to protect
 }
 
 export type State = {

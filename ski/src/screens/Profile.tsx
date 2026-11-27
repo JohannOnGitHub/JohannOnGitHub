@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
-import { Chips, fmtDate, SKI_TYPE, useAsync } from '../components/ui'
+import { Chips, fmtDate, SKI_TYPE, toast, today, useAsync } from '../components/ui'
 import { FLAG, resortById } from '../data/resorts'
 import { ResortPicker } from './AddResort'
 import { RecordsSection } from './Records'
 import { DANGER_NAME, avalanche, forecast, verdict, weatherLabel } from '../lib/conditions'
 import { live, upsert, useStore } from '../lib/store'
-import type { Profile, Trip } from '../lib/types'
+import type { DayKind, Profile, Trip } from '../lib/types'
+import { DAY_KIND, setDayKind, tripDays } from '../lib/tripDays'
+import { InjuriesSection } from './Injuries'
 
 export const LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Pro / instructor']
 
@@ -78,48 +80,60 @@ export function ProfileCard() {
         </div>
       )}
       <RecordsSection p={p} />
+      <InjuriesSection p={p} />
     </section>
   )
 }
 
-/** Every upcoming ski day, with the forecast and avalanche level once they are available. */
+/** Every upcoming trip day, with the forecast and avalanche level once they are available. */
 export function UpcomingDays({ trips, go }: { trips: Trip[]; go: (h: string) => void }) {
-  const days = trips.flatMap((t) => {
-    const out: { date: string; t: Trip }[] = []
-    for (let d = new Date(t.start + 'T12:00:00'); d <= new Date(t.end + 'T12:00:00'); d.setDate(d.getDate() + 1)) out.push({ date: d.toISOString().slice(0, 10), t })
-    return out
-  }).filter((x) => x.date >= new Date().toISOString().slice(0, 10)).slice(0, 14)
+  const now = today()
+  const days = trips
+    .flatMap((t) => tripDays(t).map((d) => ({ ...d, t })))
+    .filter((x) => x.date >= now && x.kind !== 'off')
+    .slice(0, 16)
   const resortIds = [...new Set(days.map((d) => d.t.resortId).filter(Boolean))] as string[]
   if (!days.length) return <div className="empty"><h3>No ski days planned</h3><p>Plan a trip on the Trips page; every day shows up here with its forecast.</p></div>
   return (
     <div className="panel" style={{ gap: 0 }}>
       {resortIds.map((id) => <ResortDays key={id} id={id} days={days.filter((d) => d.t.resortId === id)} go={go} />)}
+      <p className="note" style={{ marginTop: 8 }}>Mark a day as travel or rest, or remove it with ×. The trip itself stays as it is; removed days can be brought back on the trip page.</p>
     </div>
   )
 }
 
-function ResortDays({ id, days, go }: { id: string; days: { date: string; t: Trip }[]; go: (h: string) => void }) {
+function ResortDays({ id, days, go }: { id: string; days: { date: string; kind: DayKind; t: Trip }[]; go: (h: string) => void }) {
   const r = resortById(id)!
   const fc = useAsync(`fc:${id}`, () => forecast(r))
   const ava = useAsync(r.avalanche.kind === 'link' ? null : `ava:${id}`, () => avalanche(r))
   return (
     <div className="list">
-      {days.map(({ date, t }) => {
+      {days.map(({ date, kind, t }) => {
         const f = fc.data?.days.find((d) => d.date === date)
         const a = ava.data?.days.find((d) => d.date === date)
         const v = f && verdict(f)
         return (
-          <button key={date + t.id} type="button" className="item" style={{ background: 'none', border: 0, borderBottom: '1px solid var(--line)', borderRadius: 0, color: 'var(--ink)', textAlign: 'left', font: 'inherit', padding: '10px 0', cursor: 'pointer', width: '100%' }} onClick={() => go(`trip-${t.id}`)}>
-            <span>
-              <span className="name">{fmtDate(date, { weekday: 'long', day: 'numeric', month: 'short' })} · {FLAG[r.country]} {r.name}</span>
-              <span className="sub" style={{ display: 'block' }}>
-                {f ? <>{weatherLabel(f.code).icon} <span className={`tone-${v!.tone}`}>{v!.label}</span> · ❄ {Math.round(f.snowTop)} cm · {Math.round(f.tMinTop)}/{Math.round(f.tMaxTop)}° at the top · wind {Math.round(f.windTop)} km/h</>
-                  : fc.loading ? 'Loading forecast…' : 'Forecast appears about 15 days before'}
-                {a && ` · Avalanche ${a.levelHigh ?? a.level} (${DANGER_NAME[a.levelHigh ?? a.level].toLowerCase()})`}
+          <div key={date + t.id} className={`item day-row k-${kind}`}>
+            <button type="button" className="day-link" onClick={() => go(`trip-${t.id}`)}>
+              <span className="name">
+                {fmtDate(date, { weekday: 'long', day: 'numeric', month: 'short' })} · {FLAG[r.country]} {r.name}
+                {kind !== 'ski' && <span className={`kind kind-${kind}`}>{DAY_KIND[kind]}</span>}
               </span>
+              <span className="sub" style={{ display: 'block' }}>
+                {f ? <>{weatherLabel(f.code).icon} {kind === 'ski' && <><span className={`tone-${v!.tone}`}>{v!.label}</span> · </>}❄ {Math.round(f.snowTop)} cm · {Math.round(f.tMinTop)}/{Math.round(f.tMaxTop)}° at the top · wind {Math.round(f.windTop)} km/h</>
+                  : fc.loading ? 'Loading forecast…' : 'Forecast appears about 15 days before'}
+                {a && kind === 'ski' && ` · Avalanche ${a.levelHigh ?? a.level} (${DANGER_NAME[a.levelHigh ?? a.level].toLowerCase()})`}
+                {' · '}{t.name}
+              </span>
+            </button>
+            <span className="controls">
+              <select id={`dk-${t.id}-${date}`} aria-label={`Type of day, ${date}`} className="status-select" value={kind} onChange={(e) => setDayKind(t, date, e.target.value as DayKind)}>
+                <option value="ski">Ski</option><option value="travel">Travel</option><option value="rest">Rest</option>
+              </select>
+              <button type="button" className="icon-x" aria-label={`Remove ${fmtDate(date)} from your ski days`} title="Not a ski day"
+                onClick={() => { setDayKind(t, date, 'off'); toast(`${fmtDate(date)} removed from your ski days. The trip is unchanged.`) }}>×</button>
             </span>
-            <span className="small muted">{t.name}</span>
-          </button>
+          </div>
         )
       })}
     </div>

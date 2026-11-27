@@ -6,7 +6,8 @@ import { CONDITIONS } from '../data/templates'
 import { dateWarnings, MODE_LABEL, travelOptions } from '../data/travel'
 import { avalanche, depthOn, forecast, history, verdict, weatherLabel, type Forecast } from '../lib/conditions'
 import { live, newId, remove, upsert, useStore } from '../lib/store'
-import type { CondId, Discipline, SkiType, Trip } from '../lib/types'
+import { DAY_KIND, setDayKind, skiDayCount, tripDays } from '../lib/tripDays'
+import type { CondId, DayKind, Discipline, SkiType, Trip } from '../lib/types'
 
 export default function Trips({ tripId, go }: { tripId: string | null; go: (h: string) => void }) {
   const all = useStore((s) => s.trips)
@@ -101,7 +102,8 @@ function TripDetail({ trip, go }: { trip: Trip; go: (h: string) => void }) {
   const set = (p: Partial<Trip>) => upsert('trips', { ...trip, ...p })
   const [confirm, setConfirm] = useState(false)
   const until = daysBetween(today(), trip.start)
-  const nDays = daysBetween(trip.start, trip.end) + 1
+  const nDays = skiDayCount(trip)
+  const nTravel = tripDays(trip).filter((d) => d.kind === 'travel').length
 
   return (
     <>
@@ -110,7 +112,7 @@ function TripDetail({ trip, go }: { trip: Trip; go: (h: string) => void }) {
           <button type="button" className="link" style={{ paddingLeft: 0 }} onClick={() => go('trips')}>← All trips</button>
           <h1>{trip.name}</h1>
           <p>
-            {r ? `${FLAG[r.country]} ${r.name}, ${r.region}` : trip.place} · {fmtDate(trip.start, { weekday: 'short', day: 'numeric', month: 'long' })} – {fmtDate(trip.end, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })} · {nDays} ski {nDays === 1 ? 'day' : 'days'}
+            {r ? `${FLAG[r.country]} ${r.name}, ${r.region}` : trip.place} · {fmtDate(trip.start, { weekday: 'short', day: 'numeric', month: 'long' })} – {fmtDate(trip.end, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })} · {nDays} ski {nDays === 1 ? 'day' : 'days'}{nTravel ? ` + ${nTravel} travel` : ''}
             {until > 0 && ` · starts in ${until} days`}
           </p>
         </div>
@@ -127,6 +129,19 @@ function TripDetail({ trip, go }: { trip: Trip; go: (h: string) => void }) {
         </div>
       </section>
 
+      <section className="panel">
+        <div className="between"><h2>Days</h2><span className="small muted">Travel, rest and removed days don't count as ski days</span></div>
+        <div className="daygrid">
+          {tripDays(trip).map(({ date, kind }) => (
+            <label key={date} className={`dayk k-${kind}`}>
+              <span className="small"><b>{fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' })}</b></span>
+              <select id={`td-${date}`} className="status-select" value={kind} onChange={(e) => setDayKind(trip, date, e.target.value as DayKind)}>
+                {(Object.keys(DAY_KIND) as DayKind[]).map((k) => <option key={k} value={k}>{DAY_KIND[k]}</option>)}
+              </select>
+            </label>
+          ))}
+        </div>
+      </section>
       {trip.source && (
         <section className="panel">
           <div className="between"><h2>Bookings</h2><span className="tag">From {trip.source}</span></div>
@@ -243,10 +258,11 @@ function ForecastStrip({ fc, trip }: { fc: Forecast; trip: Trip }) {
         {fc.days.map((d) => {
           const w = weatherLabel(d.code)
           const v = verdict(d)
-          const on = d.date >= trip.start && d.date <= trip.end
+          const kind = d.date >= trip.start && d.date <= trip.end ? (trip.dayTypes?.[d.date] ?? 'ski') : null
+          const on = kind === 'ski'
           return (
             <div key={d.date} className={`fc-day${on ? ' on' : ''}`}>
-              <span className="d">{fmtDate(d.date)}</span>
+              <span className="d">{fmtDate(d.date)}{kind && kind !== 'ski' && kind !== 'off' && <span className={`kind kind-${kind}`}>{DAY_KIND[kind]}</span>}</span>
               <span className="big" aria-label={w.text}>{w.icon}</span>
               <span className={`small tone-${v.tone}`}>{v.label}</span>
               <span className="num">❄ {d.snowTop.toFixed(0)} cm</span>
