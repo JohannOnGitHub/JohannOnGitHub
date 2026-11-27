@@ -1,7 +1,7 @@
 // Fetches forecast, snow history and avalanche snapshots for every resort and writes
 // one JSON file per database document ({ value }) for publishing to the artifact.
 import { createServer } from 'vite'
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
 const out = process.argv[2] ?? 'conditions-out'
 const only = process.argv[3] // optional: "fc", "hist" or "ava"
 mkdirSync(out, { recursive: true })

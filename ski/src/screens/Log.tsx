@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Chips, fmtDate, SKI_TYPE, SNOW, toast, today, TYPE_COLOR, VIS } from '../components/ui'
 import { resortById, RESORTS } from '../data/resorts'
 import { live, newId, remove, upsert, useStore } from '../lib/store'
+import { addPhoto, safeSrc, type Photo } from '../lib/photos'
 import type { SkiDay, SkiType, SnowType, Visibility } from '../lib/types'
 
 /** Ski seasons run July–June: 2026-12-03 is in "2026/27". */
@@ -13,7 +14,7 @@ export const seasonOf = (date: string) => {
 export const currentSeason = () => seasonOf(today())
 
 const blank = (): Omit<SkiDay, 'id' | 'updatedAt'> => ({
-  date: today(), resortId: null, place: '', types: [], snow: 'packed', visibility: 'mixed', newSnow: null, temp: null, rating: null, highlight: '', notes: '',
+  date: today(), resortId: null, place: '', types: [], snow: 'packed', visibility: 'mixed', newSnow: null, temp: null, rating: null, highlight: '', notes: '', photos: [],
 })
 
 export default function Log() {
@@ -93,6 +94,7 @@ function DayCard({ d, onEdit }: { d: SkiDay; onEdit: () => void }) {
         {d.highlight && <p style={{ fontWeight: 500 }}>{d.highlight}</p>}
         {d.notes && <p className="small">{d.notes}</p>}
         <p className="small muted num">{meta.join('  ·  ')}</p>
+        {(d.photos?.length ?? 0) > 0 && <PhotoStrip photos={d.photos!} />}
       </div>
       <div className="side stack" style={{ justifyItems: 'end', gap: 4 }}>
         <span className="stars" aria-label={d.rating ? `${d.rating} of 5` : 'Not rated'}>{d.rating ? '★'.repeat(d.rating) + '☆'.repeat(5 - d.rating) : '–'}</span>
@@ -112,8 +114,30 @@ function DayCard({ d, onEdit }: { d: SkiDay; onEdit: () => void }) {
   )
 }
 
+function PhotoStrip({ photos }: { photos: Photo[] }) {
+  const [open, setOpen] = useState<Photo | null>(null)
+  return (
+    <>
+      <div className="photos">
+        {photos.map((p) => (
+          <button key={p.id} type="button" className="thumb" onClick={() => setOpen(p)} aria-label="Open photo">
+            <img src={safeSrc(p.url)} alt="" loading="lazy" />
+          </button>
+        ))}
+      </div>
+      {open && (
+        <div className="lightbox" role="dialog" aria-label="Photo" onClick={() => setOpen(null)}>
+          <img src={safeSrc(open.url)} alt="" />
+          <button type="button" className="quiet" onClick={() => setOpen(null)}>Close</button>
+        </div>
+      )}
+    </>
+  )
+}
+
 function DayForm({ initial, onDone }: { initial: SkiDay | null; onDone: () => void }) {
   const [f, setF] = useState(() => (initial ? { ...initial } : blank()))
+  const [busy, setBusy] = useState(false)
   const set = (p: Partial<typeof f>) => setF({ ...f, ...p })
   const num = (v: string) => (v.trim() === '' || !isFinite(Number(v)) ? null : Number(v))
   const toggle = (t: SkiType) => set({ types: f.types.includes(t) ? f.types.filter((x) => x !== t) : [...f.types, t] })
@@ -157,13 +181,39 @@ function DayForm({ initial, onDone }: { initial: SkiDay | null; onDone: () => vo
       </div>
       <div className="field"><label className="label" htmlFor="f-hl">Best hit or line</label><input id="f-hl" value={f.highlight} maxLength={140} onChange={(e) => set({ highlight: e.target.value })} placeholder="Cliff off the ridge, ~4 m, stomped" /></div>
       <div className="field"><label className="label" htmlFor="f-notes">Notes</label><textarea id="f-notes" value={f.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="Boots, wax, crowds, what to try next time" /></div>
+      <div className="field">
+        <span className="label">Photos</span>
+        <div className="photos">
+          {(f.photos ?? []).map((p) => (
+            <span key={p.id} className="thumb">
+              <img src={safeSrc(p.url)} alt="" />
+              <button type="button" className="thumb-x" aria-label="Remove photo" onClick={() => set({ photos: (f.photos ?? []).filter((x) => x.id !== p.id) })}>×</button>
+            </span>
+          ))}
+          <label className="thumb add" aria-label="Add photos">
+            {busy ? '…' : '+'}
+            <input id="f-photos" type="file" accept="image/*" multiple hidden disabled={busy} onChange={async (e) => {
+              const files = [...(e.target.files ?? [])]
+              e.target.value = ''
+              if (!files.length) return
+              setBusy(true)
+              const added: Photo[] = []
+              for (const file of files) {
+                try { added.push(await addPhoto(file)) } catch (err) { toast(err instanceof Error ? err.message : 'A photo could not be added') }
+              }
+              setF((cur) => ({ ...cur, photos: [...(cur.photos ?? []), ...added] }))
+              setBusy(false)
+            }} />
+          </label>
+        </div>
+      </div>
       <div className="field"><span className="label">Rating</span>
         <div className="rating" role="group" aria-label="Rating">
           {[1, 2, 3, 4, 5].map((n) => <button type="button" key={n} aria-pressed={(f.rating ?? 0) >= n} aria-label={`${n} of 5`} onClick={() => set({ rating: f.rating === n ? null : n })}>{n}</button>)}
         </div>
       </div>
       <div className="row">
-        <button type="submit">{initial ? 'Save changes' : 'Save day'}</button>
+        <button type="submit" disabled={busy}>{busy ? 'Uploading photos…' : initial ? 'Save changes' : 'Save day'}</button>
         {initial && <button type="button" className="quiet" onClick={onDone}>Cancel</button>}
         {!initial && f.date && <span className="small muted">{fmtDate(f.date, { weekday: 'long', day: 'numeric', month: 'long' })}</span>}
       </div>

@@ -50,7 +50,7 @@ export function TripCard({ t, go }: { t: Trip; go: (h: string) => void }) {
         <span className="tag num">{until > 0 ? `in ${until} d` : t.end >= today() ? 'now' : 'done'}</span>
       </span>
       <span className="small">{r ? `${FLAG[r.country]} ${r.name}` : t.place} · {fmtDate(t.start)} – {fmtDate(t.end)}</span>
-      <span className="chips">{t.types.map((x) => <span key={x} className="tag">{SKI_TYPE[x]}</span>)}</span>
+      <span className="chips">{t.types.map((x) => <span key={x} className="tag">{SKI_TYPE[x]}</span>)}{t.source && <span className="tag">From {t.source}</span>}</span>
     </button>
   )
 }
@@ -126,6 +126,15 @@ function TripDetail({ trip, go }: { trip: Trip; go: (h: string) => void }) {
         </div>
       </section>
 
+      {trip.source && (
+        <section className="panel">
+          <div className="between"><h2>Bookings</h2><span className="tag">From {trip.source}</span></div>
+          {trip.bookings?.length ? (
+            <ul className="small" style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>{trip.bookings.map((b) => <li key={b}>{b}</li>)}</ul>
+          ) : <p className="small muted">Nothing booked yet in {trip.source}.</p>}
+          <p className="note">Copied from {trip.source}. Change bookings there and ask Claude to sync again.</p>
+        </section>
+      )}
       {r && <Conditions r={r} trip={trip} />}
       {r && <Travel r={r} trip={trip} set={set} />}
       {r && <PracticalInfo r={r} />}

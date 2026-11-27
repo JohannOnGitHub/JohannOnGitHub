@@ -94,4 +94,19 @@ export const PRACTICAL: Record<Country, Practical> = {
     ],
     rules: ['Motorways need a vignette (digital vignette, buy before you drive).'],
   },
+  IT: {
+    currency: 'EUR',
+    phones: [
+      { number: '112', what: 'European emergency number (single number in most regions)' },
+      { number: '118', what: 'Medical emergency and mountain rescue' },
+    ],
+    apps: [
+      { name: 'AINEVA', what: 'Italian regional avalanche bulletins', url: 'https://bollettini.aineva.it/' },
+      { name: 'Dolomiti Superski', what: 'Pass, lifts and piste map for the Dolomites', url: 'https://www.dolomitisuperski.com/' },
+    ],
+    rules: [
+      'Third-party liability insurance is required to ski on Italian pistes: buy it with the pass if your own insurance does not cover it.',
+      'Helmets are required for under-18s, and off-piste skiers must carry a transceiver, shovel and probe when there is avalanche risk.',
+    ],
+  },
 }

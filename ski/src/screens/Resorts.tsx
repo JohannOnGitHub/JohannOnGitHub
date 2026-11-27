@@ -18,8 +18,10 @@ export default function Resorts({ go }: { go: (h: string) => void }) {
   const [tags, setTags] = useState<Tag[]>([])
   const [country, setCountry] = useState<Country | 'all'>('all')
   const [sort, setSort] = useState<Sort>('km')
+  const [q, setQ] = useState('')
+  const norm = (x: string) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
-  const list = RESORTS.filter((r) => (country === 'all' || r.country === country) && tags.every((t) => r.tags.includes(t))).sort((a, b) => {
+  const list = RESORTS.filter((r) => (country === 'all' || r.country === country) && tags.every((t) => r.tags.includes(t)) && (!q || norm(`${r.name} ${r.area ?? ''} ${r.region}`).includes(norm(q)))).sort((a, b) => {
     if (sort === 'km') return b.km - a.km
     if (sort === 'vertical') return b.top - b.base - (a.top - a.base)
     if (sort === 'top') return b.top - a.top
@@ -43,6 +45,7 @@ export default function Resorts({ go }: { go: (h: string) => void }) {
           ))}
         </div>
         <div className="row">
+          <input id="r-search" type="search" aria-label="Search resorts" placeholder="Search: Vars, Dolomites, Sälen…" value={q} onChange={(e) => setQ(e.target.value)} style={{ flex: '1 1 200px', width: 'auto' }} />
           <select id="r-country" aria-label="Country" value={country} onChange={(e) => setCountry(e.target.value as Country | 'all')} style={{ width: 'auto' }}>
             <option value="all">All countries</option>
             {(Object.keys(COUNTRY_NAMES) as Country[]).map((c) => <option key={c} value={c}>{FLAG[c]} {COUNTRY_NAMES[c]}</option>)}

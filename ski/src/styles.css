@@ -252,3 +252,13 @@ td.num, th.num { text-align: right; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(90px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 6px; z-index: 30; font-size: 0.9rem; }
 @media (min-width: 761px) { .toast { bottom: 24px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+
+/* ---------- Photos ---------- */
+.photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.thumb { position: relative; width: 84px; height: 84px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--sunken); padding: 0; display: grid; place-items: center; cursor: pointer; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb.add { font-size: 1.8rem; color: var(--muted); border-style: dashed; }
+.thumb-x { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; padding: 0; justify-content: center; border-radius: 50%; background: rgba(0, 0, 0, 0.6); border: 0; color: #fff; font-size: 0.9rem; }
+.lightbox { position: fixed; inset: 0; z-index: 40; background: rgba(5, 10, 15, 0.9); display: grid; place-items: center; gap: 12px; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.lightbox img { max-width: 100%; max-height: 80vh; border-radius: 6px; }
+.lightbox button { color: #fff; border-color: rgba(255, 255, 255, 0.5); }

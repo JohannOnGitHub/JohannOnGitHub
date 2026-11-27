@@ -42,6 +42,7 @@ export type SkiDay = Rec & {
   rating: number | null // 1–5
   highlight: string
   notes: string
+  photos?: { id: string; url: string }[]
 }
 
 export type Trip = Rec & {
@@ -54,6 +55,8 @@ export type Trip = Rec & {
   travelChoice: string // chosen travel option id, or ''
   plan: string // free text: bookings, times, who
   checklist: Record<string, boolean>
+  source?: string // e.g. "Trips Calendar" when copied from there
+  bookings?: string[] // booked items and costs from the source
 }
 
 export type Profile = Rec & {
