@@ -54,7 +54,7 @@ export default function Home({ go }: { go: (h: string) => void }) {
             const c = coverage(gear.filter((g) => g.discipline === d || g.discipline === 'shared'))
             return (
               <div key={d} className="stack" style={{ gap: 4 }}>
-                <div className="between small"><span>{DISCIPLINES[d]}</span><span className="num">{c.have}/{c.total} essentials</span></div>
+                <div className="between small"><span>{DISCIPLINES[d]}</span><span className="num">{c.have}/{c.total} ready</span></div>
                 <div className="meter"><i style={{ width: `${c.total ? (c.have / c.total) * 100 : 0}%`, background: 'var(--good)' }} /></div>
               </div>
             )

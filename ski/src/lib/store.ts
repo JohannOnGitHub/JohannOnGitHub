@@ -98,6 +98,7 @@ export function upsert<C extends Collection>(c: C, item: State[C][number]) {
 export function remove(c: Collection, id: string) {
   const list = state[c] as Rec[]
   if (ARTIFACT) {
+    pending.delete(`${c}/${id}`) // an unsent edit must not bring the item back
     void db?.collection(c).doc(id).delete().catch(() => setBackend({ state: 'error', message: 'Could not delete. Check your connection.' }))
     commit({ ...state, [c]: list.filter((x) => x.id !== id) })
     return

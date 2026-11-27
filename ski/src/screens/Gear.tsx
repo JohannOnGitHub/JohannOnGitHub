@@ -10,10 +10,10 @@ export const DISCIPLINES: Record<Discipline | 'shared', string> = {
   shared: 'For every kind',
 }
 
+/** Ready = owned or not needed. Every item on the list counts toward the total. */
 export function coverage(items: GearItem[]) {
-  const ess = items.filter((g) => g.essential && g.status !== 'na')
-  const have = ess.filter((g) => g.status === 'have').length
-  return { have, total: ess.length }
+  const have = items.filter((g) => g.status === 'have' || g.status === 'na').length
+  return { have, total: items.length }
 }
 
 export default function Gear() {
@@ -36,7 +36,7 @@ export default function Gear() {
         {(['allmountain', 'park', 'touring'] as Discipline[]).map((d) => {
           const c = coverage(gear.filter((g) => g.discipline === d || g.discipline === 'shared'))
           const missing = gear.filter((g) => (g.discipline === d || g.discipline === 'shared') && g.essential && g.status === 'missing').length
-          const unknown = gear.filter((g) => (g.discipline === d || g.discipline === 'shared') && g.essential && g.status === 'unknown').length
+          const unknown = gear.filter((g) => (g.discipline === d || g.discipline === 'shared') && g.status === 'unknown').length
           return (
             <button key={d} type="button" className="panel quiet" style={{ textAlign: 'left', cursor: 'pointer', color: 'var(--ink)', background: 'var(--surface)', borderColor: tab === d ? 'var(--accent)' : 'var(--line)' }} onClick={() => setTab(d)}>
               <span className="between" style={{ width: '100%' }}>
@@ -47,7 +47,7 @@ export default function Gear() {
                 <i style={{ width: `${c.total ? (c.have / c.total) * 100 : 0}%`, background: 'var(--good)' }} />
               </span>
               <span className="small muted">
-                Essentials owned{missing ? ` · ${missing} missing` : ''}{unknown ? ` · ${unknown} not checked` : ''}
+                Items ready{missing ? ` · ${missing} essential${missing === 1 ? '' : 's'} missing` : ''}{unknown ? ` · ${unknown} not checked` : ''}
               </span>
             </button>
           )

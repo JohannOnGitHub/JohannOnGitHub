@@ -9,8 +9,8 @@ const LAYERS: Record<ClothingItem['layer'], string> = {
 }
 
 export function readiness(items: ClothingItem[], c: CondId) {
-  const forC = items.filter((i) => i.conditions.includes(c) && i.status !== 'na')
-  return { have: forC.filter((i) => i.status === 'have').length, total: forC.length, missing: forC.filter((i) => i.status === 'missing').length }
+  const forC = items.filter((i) => i.conditions.includes(c))
+  return { have: forC.filter((i) => i.status === 'have' || i.status === 'na').length, total: forC.length, missing: forC.filter((i) => i.status === 'missing').length }
 }
 
 export default function Clothing() {
