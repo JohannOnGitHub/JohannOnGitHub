@@ -6,8 +6,8 @@ import type { SkiType, SnowType, Status, Visibility } from '../lib/types'
 export const STATUS: Record<Status, string> = {
   have: 'Have', missing: 'Missing', upgrade: 'Replace', na: 'Not needed', unknown: 'Not checked',
 }
-export const SKI_TYPE: Record<SkiType, string> = { piste: 'Piste', freeride: 'Freeride', park: 'Park', touring: 'Touring', backcountry: 'Backcountry' }
-export const TYPE_COLOR: Record<SkiType, string> = { piste: 'var(--piste)', freeride: 'var(--free)', park: 'var(--park)', touring: 'var(--tour)', backcountry: 'var(--tour)' }
+export const SKI_TYPE: Record<SkiType, string> = { piste: 'Piste', freeride: 'Freeride', park: 'Park', touring: 'Touring' }
+export const TYPE_COLOR: Record<SkiType, string> = { piste: 'var(--piste)', freeride: 'var(--free)', park: 'var(--park)', touring: 'var(--tour)' }
 export const SNOW: Record<SnowType, string> = { powder: 'Powder', packed: 'Packed', crud: 'Crud', ice: 'Ice', corn: 'Spring corn', slush: 'Slush', artificial: 'Machine-made' }
 export const VIS: Record<Visibility, string> = { bluebird: 'Bluebird', mixed: 'Mixed', flat: 'Flat light', storm: 'Storm' }
 

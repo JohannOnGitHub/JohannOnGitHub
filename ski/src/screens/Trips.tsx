@@ -345,7 +345,7 @@ const FragmentRow = ({ a, b }: { a: React.ReactNode; b: string }) => (<>{a}<span
 
 // ---------------- Packing ----------------
 
-const NEEDS: Record<SkiType, Discipline[]> = { piste: ['allmountain'], freeride: ['allmountain'], park: ['park'], touring: ['touring'], backcountry: ['touring', 'allmountain'] }
+const NEEDS: Record<SkiType, Discipline[]> = { piste: ['allmountain'], freeride: ['allmountain'], park: ['park'], touring: ['touring', 'allmountain'] }
 
 function Packing({ trip, set }: { trip: Trip; set: (p: Partial<Trip>) => void }) {
   const gearAll = useStore((s) => s.gear)
@@ -357,7 +357,7 @@ function Packing({ trip, set }: { trip: Trip; set: (p: Partial<Trip>) => void })
   if (m === 12 || m <= 2) conds.add('cold')
   if (m >= 3 && m <= 6) conds.add('spring')
   conds.add('storm')
-  if (trip.types.includes('touring') || trip.types.includes('backcountry')) conds.add('uphill')
+  if (trip.types.includes('touring')) conds.add('uphill')
   const clothes = live(clothesAll).filter((c) => c.conditions.some((x) => conds.has(x)) && c.status !== 'na')
   const missing = [...gear, ...clothes].filter((x) => x.status === 'missing' || x.status === 'unknown')
   const check = (id: string) => set({ checklist: { ...trip.checklist, [id]: !trip.checklist[id] } })

@@ -1,7 +1,7 @@
 // Shared types for Ski Base.
 
 export type Discipline = 'park' | 'allmountain' | 'touring'
-export type SkiType = 'piste' | 'freeride' | 'park' | 'touring' | 'backcountry'
+export type SkiType = 'piste' | 'freeride' | 'park' | 'touring'
 export type SnowType = 'powder' | 'packed' | 'crud' | 'ice' | 'corn' | 'slush' | 'artificial'
 export type Visibility = 'bluebird' | 'mixed' | 'flat' | 'storm'
 
