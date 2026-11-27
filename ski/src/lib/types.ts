@@ -56,9 +56,21 @@ export type Trip = Rec & {
   checklist: Record<string, boolean>
 }
 
+export type Profile = Rec & {
+  level: string
+  styles: SkiType[]
+  focus: string // what you like most, e.g. jumps
+  home: string
+  footLength: number | null // cm
+  footWidth: number | null // cm
+  favourites: string[] // resort ids
+  notes: string
+}
+
 export type State = {
   v: 1
   home: string
+  profile: Profile[]
   gear: GearItem[]
   clothing: ClothingItem[]
   days: SkiDay[]

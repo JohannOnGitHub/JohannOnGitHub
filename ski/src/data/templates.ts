@@ -1,6 +1,6 @@
 // Starting checklists for gear and clothing. Statuses that are already known
 // from your profile are filled in; everything else starts as "not checked".
-import type { ClothingItem, CondId, Discipline, GearItem, Status } from '../lib/types'
+import type { ClothingItem, CondId, Discipline, GearItem, Profile, Status } from '../lib/types'
 
 type G = [Discipline | 'shared', string, boolean, Status?, string?, string?]
 // [discipline, slot, essential, status, model, note]
@@ -98,4 +98,13 @@ export function seedClothing(): ClothingItem[] {
   return CLOTHING.map(([layer, name, conditions]) => ({
     id: id('c'), updatedAt: 1, layer, name, conditions, status: 'unknown', model: '', note: '',
   }))
+}
+
+export function seedProfile(): Profile {
+  return {
+    id: 'me', updatedAt: 1, level: 'Expert', styles: ['freeride', 'piste', 'park'],
+    focus: 'Jumps: natural features, park and cliffs', home: 'Stockholm', footLength: 26, footWidth: 10,
+    favourites: ['stoten', 'idre', 'riksgransen', 'hemsedal', 'kittelfjall', 'hemavan'],
+    notes: 'Early-season glacier picks: Zermatt and Sölden. Christmas options: Stöten or Idre, Löfsdalen as a snow-reliable back-up, La Clusaz abroad.',
+  }
 }

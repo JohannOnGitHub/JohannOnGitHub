@@ -1,0 +1,98 @@
+import { useMemo, useState } from 'react'
+import { Chips, fmtDate, SKI_TYPE, useAsync } from '../components/ui'
+import { FLAG, resortById, RESORTS } from '../data/resorts'
+import { DANGER_NAME, avalanche, forecast, verdict, weatherLabel } from '../lib/conditions'
+import { live, upsert, useStore } from '../lib/store'
+import type { Profile, Trip } from '../lib/types'
+
+export function ProfileCard() {
+  const all = useStore((s) => s.profile)
+  const p = useMemo(() => live(all)[0], [all])
+  const [edit, setEdit] = useState(false)
+  if (!p) return null
+  const set = (x: Partial<Profile>) => upsert('profile', { ...p, ...x })
+  return (
+    <section className="panel">
+      <div className="between">
+        <h2>Ski profile</h2>
+        <button type="button" className="link" onClick={() => setEdit(!edit)} aria-expanded={edit}>{edit ? 'Done' : 'Edit'}</button>
+      </div>
+      {!edit ? (
+        <div className="grid2" style={{ gap: 12 }}>
+          <dl className="phones" style={{ margin: 0 }}>
+            <dt className="muted small">Level</dt><dd style={{ margin: 0 }}>{p.level}</dd>
+            <dt className="muted small">Skis</dt><dd style={{ margin: 0 }}>{p.styles.map((s) => SKI_TYPE[s]).join(', ')}</dd>
+            <dt className="muted small">Loves</dt><dd style={{ margin: 0 }}>{p.focus}</dd>
+            <dt className="muted small">Home</dt><dd style={{ margin: 0 }}>{p.home}</dd>
+            <dt className="muted small">Feet</dt>
+            <dd style={{ margin: 0 }} className="num">{p.footLength ?? '–'} cm long × {p.footWidth ?? '–'} cm wide{p.footLength && p.footWidth && p.footWidth / p.footLength >= 0.38 ? ' · wide: look for a 102 mm+ last' : ''}</dd>
+          </dl>
+          <div className="stack" style={{ gap: 6 }}>
+            <span className="label">Home resorts</span>
+            <div className="chips">{p.favourites.map((id) => { const r = resortById(id); return r ? <span key={id} className="tag">{FLAG[r.country]} {r.name}</span> : null })}</div>
+            {p.notes && <p className="small">{p.notes}</p>}
+          </div>
+        </div>
+      ) : (
+        <div className="stack">
+          <div className="fields">
+            <div className="field"><label className="label" htmlFor="p-level">Level</label><input id="p-level" value={p.level} onChange={(e) => set({ level: e.target.value })} /></div>
+            <div className="field"><label className="label" htmlFor="p-home">Home</label><input id="p-home" value={p.home} onChange={(e) => set({ home: e.target.value })} /></div>
+            <div className="field"><label className="label" htmlFor="p-fl">Foot length (cm)</label><input id="p-fl" type="number" step="0.1" value={p.footLength ?? ''} onChange={(e) => set({ footLength: e.target.value ? Number(e.target.value) : null })} /></div>
+            <div className="field"><label className="label" htmlFor="p-fw">Foot width (cm)</label><input id="p-fw" type="number" step="0.1" value={p.footWidth ?? ''} onChange={(e) => set({ footWidth: e.target.value ? Number(e.target.value) : null })} /></div>
+          </div>
+          <div className="field"><span className="label">Kinds of skiing</span><Chips label="Kinds of skiing" options={SKI_TYPE} value={p.styles} onToggle={(t) => set({ styles: p.styles.includes(t) ? p.styles.filter((x) => x !== t) : [...p.styles, t] })} /></div>
+          <div className="field"><label className="label" htmlFor="p-focus">What you love most</label><input id="p-focus" value={p.focus} onChange={(e) => set({ focus: e.target.value })} /></div>
+          <div className="field"><span className="label">Home resorts</span>
+            <div className="chips">{RESORTS.map((r) => <button type="button" key={r.id} className="chip" aria-pressed={p.favourites.includes(r.id)} onClick={() => set({ favourites: p.favourites.includes(r.id) ? p.favourites.filter((x) => x !== r.id) : [...p.favourites, r.id] })}>{r.name}</button>)}</div>
+          </div>
+          <div className="field"><label className="label" htmlFor="p-notes">Notes</label><textarea id="p-notes" value={p.notes} onChange={(e) => set({ notes: e.target.value })} /></div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+/** Every upcoming ski day, with the forecast and avalanche level once they are available. */
+export function UpcomingDays({ trips, go }: { trips: Trip[]; go: (h: string) => void }) {
+  const days = trips.flatMap((t) => {
+    const out: { date: string; t: Trip }[] = []
+    for (let d = new Date(t.start + 'T12:00:00'); d <= new Date(t.end + 'T12:00:00'); d.setDate(d.getDate() + 1)) out.push({ date: d.toISOString().slice(0, 10), t })
+    return out
+  }).filter((x) => x.date >= new Date().toISOString().slice(0, 10)).slice(0, 14)
+  const resortIds = [...new Set(days.map((d) => d.t.resortId).filter(Boolean))] as string[]
+  if (!days.length) return <div className="empty"><h3>No ski days planned</h3><p>Plan a trip on the Trips page; every day shows up here with its forecast.</p></div>
+  return (
+    <div className="panel" style={{ gap: 0 }}>
+      {resortIds.map((id) => <ResortDays key={id} id={id} days={days.filter((d) => d.t.resortId === id)} go={go} />)}
+    </div>
+  )
+}
+
+function ResortDays({ id, days, go }: { id: string; days: { date: string; t: Trip }[]; go: (h: string) => void }) {
+  const r = resortById(id)!
+  const fc = useAsync(`fc:${id}`, () => forecast(r))
+  const ava = useAsync(r.avalanche.kind === 'link' ? null : `ava:${id}`, () => avalanche(r))
+  return (
+    <div className="list">
+      {days.map(({ date, t }) => {
+        const f = fc.data?.days.find((d) => d.date === date)
+        const a = ava.data?.days.find((d) => d.date === date)
+        const v = f && verdict(f)
+        return (
+          <button key={date + t.id} type="button" className="item" style={{ background: 'none', border: 0, borderBottom: '1px solid var(--line)', borderRadius: 0, color: 'var(--ink)', textAlign: 'left', font: 'inherit', padding: '10px 0', cursor: 'pointer', width: '100%' }} onClick={() => go(`trip-${t.id}`)}>
+            <span>
+              <span className="name">{fmtDate(date, { weekday: 'long', day: 'numeric', month: 'short' })} · {FLAG[r.country]} {r.name}</span>
+              <span className="sub" style={{ display: 'block' }}>
+                {f ? <>{weatherLabel(f.code).icon} <span className={`tone-${v!.tone}`}>{v!.label}</span> · ❄ {Math.round(f.snowTop)} cm · {Math.round(f.tMinTop)}/{Math.round(f.tMaxTop)}° at the top · wind {Math.round(f.windTop)} km/h</>
+                  : fc.loading ? 'Loading forecast…' : 'Forecast appears about 15 days before'}
+                {a && ` · Avalanche ${a.levelHigh ?? a.level} (${DANGER_NAME[a.levelHigh ?? a.level].toLowerCase()})`}
+              </span>
+            </span>
+            <span className="small muted">{t.name}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}

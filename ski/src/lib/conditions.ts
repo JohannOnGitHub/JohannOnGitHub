@@ -2,6 +2,7 @@
 // bulletins from Varsom (Norway), SLF (Switzerland) and avalanche.report (Tyrol).
 // Responses are cached in localStorage so the app stays fast and works offline.
 import type { Avalanche, Resort } from '../data/resorts'
+import { ARTIFACT, readSnapshot } from './artifactDb'
 
 function cacheGet<T>(k: string, maxAgeMs: number): T | null {
   try {
@@ -60,6 +61,7 @@ type OMDaily = {
 type OMOne = { daily: OMDaily; hourly?: { time: string[]; freezing_level_height?: (number | null)[]; snow_depth?: (number | null)[] } }
 
 export async function forecast(r: Resort): Promise<Forecast> {
+  if (ARTIFACT) return readSnapshot<Forecast>(`fc-${r.id}`)
   const k = `fc:${r.id}`
   const hit = cacheGet<Forecast>(k, 3 * HOUR)
   if (hit) return hit
@@ -96,55 +98,52 @@ export async function forecast(r: Resort): Promise<Forecast> {
 
 // ---------------- Snow history (modelled, ERA5) ----------------
 
-export type Season = { label: string; snowfall: number; meanDepth: number; maxDepth: number; daysOver50: number; onDates?: number }
+export type Season = {
+  label: string; snowfall: number; meanDepth: number; maxDepth: number; daysOver50: number
+  depth: Record<string, number> // "MM-DD" → cm at noon, 1 Nov – 30 Apr
+}
 export type History = { seasons: Season[]; elevation: number; fetchedAt: number }
+
+/** Snow depth on a given day ("MM-DD") in each past season. */
+export const depthOn = (h: History, md: string) => h.seasons.map((s) => ({ label: s.label, cm: s.depth[md] ?? null, snowfall: s.snowfall, meanDepth: s.meanDepth }))
 
 /**
  * The last five seasons at the resort's mid-mountain point, from the ERA5 reanalysis.
  * Model data on a ~10–25 km grid: good for comparing resorts and seasons, not exact
- * on-piste depth. With `md` ("MM-DD"), also gives the depth on that date each season.
+ * on-piste depth. One request per season keeps each call small.
  */
-export async function history(r: Resort, md?: string): Promise<History> {
-  const k = `hist:${r.id}:${md ?? ''}`
+export async function history(r: Resort): Promise<History> {
+  if (ARTIFACT) return readSnapshot<History>(`hist-${r.id}`)
+  const k = `hist2:${r.id}`
   const hit = cacheGet<History>(k, 14 * DAY)
   if (hit) return hit
   const now = new Date()
-  // Last complete season ends 30 Apr; seasons run 1 Nov – 30 Apr.
   const lastEndYear = now.getMonth() >= 4 ? now.getFullYear() : now.getFullYear() - 1
-  const firstStartYear = lastEndYear - 5
   const mid = Math.round((r.top + r.base) / 2)
-  const url =
-    `https://archive-api.open-meteo.com/v1/archive?latitude=${r.lat}&longitude=${r.lon}&elevation=${mid}` +
-    `&start_date=${firstStartYear}-11-01&end_date=${lastEndYear}-04-30&daily=snowfall_sum&hourly=snow_depth&timezone=auto`
-  const j = await getJson<{ daily: { time: string[]; snowfall_sum: (number | null)[] }; hourly: { time: string[]; snow_depth: (number | null)[] } }>(url)
-  const depthByDay = new Map<string, number>()
-  j.hourly.time.forEach((t, i) => {
-    if (t.slice(11, 13) !== '12') return
-    const v = j.hourly.snow_depth[i]
-    if (v != null) depthByDay.set(t.slice(0, 10), v * 100)
-  })
   const seasons: Season[] = []
-  for (let y = firstStartYear; y < lastEndYear; y++) {
-    const from = `${y}-11-01`, to = `${y + 1}-04-30`
-    let snowfall = 0
-    j.daily.time.forEach((d, i) => {
-      if (d >= from && d <= to) snowfall += j.daily.snowfall_sum[i] ?? 0
+  for (let y = lastEndYear - 5; y < lastEndYear; y++) {
+    const url =
+      `https://archive-api.open-meteo.com/v1/archive?latitude=${r.lat}&longitude=${r.lon}&elevation=${mid}` +
+      `&start_date=${y}-11-01&end_date=${y + 1}-04-30&daily=snowfall_sum&hourly=snow_depth&timezone=auto`
+    const j = await getJson<{ daily: { time: string[]; snowfall_sum: (number | null)[] }; hourly: { time: string[]; snow_depth: (number | null)[] } }>(url)
+    const depth: Record<string, number> = {}
+    const core: number[] = []
+    j.hourly.time.forEach((t, i) => {
+      const v = j.hourly.snow_depth[i]
+      if (t.slice(11, 13) !== '12' || v == null) return
+      const cm = Math.round(v * 100)
+      depth[t.slice(5, 10)] = cm
+      const m = Number(t.slice(5, 7))
+      if (m === 12 || m <= 3) core.push(cm)
     })
-    const depths: number[] = []
-    for (const [d, v] of depthByDay) if (d >= `${y}-12-01` && d <= `${y + 1}-03-31`) depths.push(v)
-    const season: Season = {
+    seasons.push({
       label: `${y}/${String(y + 1).slice(2)}`,
-      snowfall: Math.round(snowfall),
-      meanDepth: depths.length ? Math.round(depths.reduce((a, b) => a + b, 0) / depths.length) : 0,
-      maxDepth: depths.length ? Math.round(Math.max(...depths)) : 0,
-      daysOver50: depths.filter((v) => v >= 50).length,
-    }
-    if (md) {
-      const yy = md >= '11-01' ? y : y + 1
-      const v = depthByDay.get(`${yy}-${md}`)
-      if (v != null) season.onDates = Math.round(v)
-    }
-    seasons.push(season)
+      snowfall: Math.round(j.daily.snowfall_sum.reduce<number>((a, b) => a + (b ?? 0), 0)),
+      meanDepth: core.length ? Math.round(core.reduce((a, b) => a + b, 0) / core.length) : 0,
+      maxDepth: core.length ? Math.max(...core) : 0,
+      daysOver50: core.filter((v) => v >= 50).length,
+      depth,
+    })
   }
   const out = { seasons, elevation: mid, fetchedAt: Date.now() }
   cacheSet(k, out)
@@ -198,6 +197,7 @@ function fromCaaml(j: Caaml, region: string): AvaDay[] {
 export async function avalanche(r: Resort): Promise<AvaResult | null> {
   const a: Avalanche = r.avalanche
   if (a.kind === 'link') return null
+  if (ARTIFACT) return readSnapshot<AvaResult>(`ava-${r.id}`)
   const k = `ava:${r.id}`
   const hit = cacheGet<AvaResult>(k, 2 * HOUR)
   if (hit) return hit

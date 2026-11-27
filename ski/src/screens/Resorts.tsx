@@ -106,7 +106,7 @@ function ResortCard({ r, days, go }: { r: Resort; days: number; go: (h: string) 
 
 function SnowFacts({ r }: { r: Resort }) {
   const fc = useAsync(`fc:${r.id}`, () => forecast(r))
-  const h = useAsync(`hist:${r.id}:`, () => history(r))
+  const h = useAsync(`hist:${r.id}`, () => history(r))
   const next7 = fc.data?.days.slice(0, 7).reduce((a, d) => a + d.snowTop, 0)
   const avg = (k: 'snowfall' | 'meanDepth' | 'maxDepth' | 'daysOver50') =>
     h.data && h.data.seasons.length ? Math.round(h.data.seasons.reduce((a, s) => a + s[k], 0) / h.data.seasons.length) : null

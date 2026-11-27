@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Toaster } from './components/ui'
+import { useBackend } from './lib/store'
 import Clothing from './screens/Clothing'
 import Gear from './screens/Gear'
 import Home from './screens/Home'
@@ -31,6 +32,7 @@ export default function App() {
   const go = (h: string) => {
     location.hash = h
   }
+  const backend = useBackend()
   const tripId = route.startsWith('trip-') ? route.slice(5) : null
   const section = tripId ? 'trips' : route
 
@@ -53,6 +55,8 @@ export default function App() {
         </div>
       </header>
       <main>
+        {backend.state === 'loading' && <div className="banner">Loading your ski data…</div>}
+        {(backend.state === 'offline' || backend.state === 'error') && <div className="banner error">{backend.message}</div>}
         {section === 'trips' ? <Trips tripId={tripId} go={go} />
           : section === 'log' ? <Log />
           : section === 'gear' ? <Gear />

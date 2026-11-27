@@ -8,7 +8,8 @@ import type { CondId, Discipline, SkiType } from '../lib/types'
 import { readiness } from './Clothing'
 import { coverage, DISCIPLINES } from './Gear'
 import { currentSeason, seasonOf } from './Log'
-import { TripCard } from './Trips'
+import { ProfileCard, UpcomingDays } from './Profile'
+import { ARTIFACT } from '../lib/artifactDb'
 
 export default function Home({ go }: { go: (h: string) => void }) {
   const s = useStore((x) => x)
@@ -39,9 +40,11 @@ export default function Home({ go }: { go: (h: string) => void }) {
         <div className="stat"><span className="label">To buy</span><b className="num">{shopping}</b></div>
       </div>
 
+      <ProfileCard />
+
       <section className="stack">
-        <div className="between"><h2>Next trips</h2><button type="button" className="ghost" onClick={() => go('trips')}>All trips</button></div>
-        {trips.length ? <div className="grid3">{trips.slice(0, 3).map((t) => <TripCard key={t.id} t={t} go={go} />)}</div> : <div className="empty"><h3>No trip planned</h3><p>Plan one on the Trips page.</p></div>}
+        <div className="between"><h2>Upcoming ski days</h2><button type="button" className="ghost" onClick={() => go('trips')}>All trips</button></div>
+        <UpcomingDays trips={trips} go={go} />
       </section>
 
       <div className="grid2">
@@ -81,6 +84,20 @@ export default function Home({ go }: { go: (h: string) => void }) {
 }
 
 function Settings() {
+  if (ARTIFACT) return <ArtifactData />
+  return <LocalSettings />
+}
+
+function ArtifactData() {
+  return (
+    <section className="panel">
+      <h2>Your data</h2>
+      <p className="small muted">Everything you change here is saved to this page and follows you to any device where you open it on claude.ai. Weather, snow and avalanche data are snapshots fetched by Claude; each section shows when it was updated. Ask Claude to refresh conditions before a trip.</p>
+    </section>
+  )
+}
+
+function LocalSettings() {
   const [sync, setSync] = useState<SyncStatus | null>(null)
   const [code, setCode] = useState('')
   useEffect(() => onSync(setSync), [])

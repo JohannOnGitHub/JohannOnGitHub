@@ -1,16 +1,18 @@
 // App state, kept in localStorage. Every record has an id and a change time, and
 // deletions are tombstones, so two devices can merge their copies (see sync.ts).
 import { useSyncExternalStore } from 'react'
-import { seedClothing, seedGear } from '../data/templates'
+import { seedClothing, seedGear, seedProfile } from '../data/templates'
+import { ARTIFACT, getDb, type DB } from './artifactDb'
 import type { Rec, State } from './types'
 
 const KEY = 'skibase:v1'
-export type Collection = 'gear' | 'clothing' | 'days' | 'trips'
+export type Collection = 'profile' | 'gear' | 'clothing' | 'days' | 'trips'
 
 function seed(): State {
   return {
     v: 1,
     home: 'Stockholm',
+    profile: [seedProfile()],
     gear: seedGear(),
     clothing: seedClothing(),
     days: [],
@@ -36,12 +38,16 @@ function load(): State {
   return seed()
 }
 
-let state: State = load()
+let state: State = ARTIFACT ? { v: 1, home: 'Stockholm', profile: [], gear: [], clothing: [], days: [], trips: [] } : load()
 const listeners = new Set<() => void>()
 let changeHook: ((s: State) => void) | null = null
 
 function commit(next: State, fromSync = false) {
   state = next
+  if (ARTIFACT) {
+    listeners.forEach((l) => l())
+    return
+  }
   try {
     localStorage.setItem(KEY, JSON.stringify(state))
   } catch {
@@ -74,6 +80,7 @@ export const newId = (p: string) => `${p}-${Date.now().toString(36)}-${Math.rand
 export function upsert<C extends Collection>(c: C, item: State[C][number]) {
   const list = state[c] as Rec[]
   const stamped = { ...item, updatedAt: Date.now() }
+  if (ARTIFACT) queueWrite(c, stamped)
   const i = list.findIndex((x) => x.id === item.id)
   const next = i >= 0 ? list.map((x, j) => (j === i ? stamped : x)) : [...list, stamped]
   commit({ ...state, [c]: next })
@@ -81,6 +88,11 @@ export function upsert<C extends Collection>(c: C, item: State[C][number]) {
 
 export function remove(c: Collection, id: string) {
   const list = state[c] as Rec[]
+  if (ARTIFACT) {
+    void db?.collection(c).doc(id).delete().catch(() => setBackend({ state: 'error', message: 'Could not delete. Check your connection.' }))
+    commit({ ...state, [c]: list.filter((x) => x.id !== id) })
+    return
+  }
   commit({ ...state, [c]: list.map((x) => (x.id === id ? { ...x, deleted: true, updatedAt: Date.now() } : x)) })
 }
 
@@ -96,7 +108,7 @@ export function merge(a: State, b: State): State {
     }
     return [...by.values()]
   }
-  return { ...a, home: a.home || b.home, gear: m(a.gear, b.gear), clothing: m(a.clothing, b.clothing), days: m(a.days, b.days), trips: m(a.trips, b.trips) }
+  return { ...a, home: a.home || b.home, profile: m(a.profile, b.profile), gear: m(a.gear, b.gear), clothing: m(a.clothing, b.clothing), days: m(a.days, b.days), trips: m(a.trips, b.trips) }
 }
 
 export function exportJson() {
@@ -112,3 +124,85 @@ export function importJson(text: string): boolean {
     return false
   }
 }
+
+// ---------------- Artifact database backend ----------------
+
+export type Backend = { state: 'local' | 'loading' | 'ready' | 'offline' | 'error'; message?: string }
+let backend: Backend = { state: ARTIFACT ? 'loading' : 'local' }
+const backendListeners = new Set<() => void>()
+function setBackend(b: Backend) {
+  backend = b
+  backendListeners.forEach((l) => l())
+}
+export function useBackend() {
+  return useSyncExternalStore(
+    (l) => {
+      backendListeners.add(l)
+      return () => backendListeners.delete(l)
+    },
+    () => backend,
+  )
+}
+
+let db: DB | null = null
+// Typing in a text field changes a record on every key press: write each record
+// at most once per pause, one write at a time.
+const pending = new Map<string, { c: Collection; rec: Rec }>()
+let flushTimer: ReturnType<typeof setTimeout> | undefined
+let flushing = false
+function queueWrite(c: Collection, rec: Rec) {
+  pending.set(`${c}/${rec.id}`, { c, rec })
+  clearTimeout(flushTimer)
+  flushTimer = setTimeout(() => void flush(), 700)
+}
+async function flush() {
+  if (flushing || !db) return
+  flushing = true
+  try {
+    while (pending.size) {
+      const [key, { c, rec }] = pending.entries().next().value!
+      pending.delete(key)
+      const { id, ...body } = rec as Rec & Record<string, unknown>
+      try {
+        await db.collection(c).doc(id).set(JSON.parse(JSON.stringify(body)))
+      } catch (e) {
+        const code = (e as { code?: string }).code
+        setBackend({ state: 'error', message: code === 'not_granted' || code === 'permission_denied' ? 'You can view this page but not change it.' : 'A change was not saved. Check your connection.' })
+      }
+    }
+  } finally {
+    flushing = false
+  }
+}
+
+async function startArtifact() {
+  db = await getDb()
+  if (!db) {
+    setBackend({ state: 'offline', message: 'Your data is not reachable in this view. Open the page on claude.ai while signed in.' })
+    return
+  }
+  const timer = setTimeout(() => {
+    if (backend.state === 'loading') setBackend({ state: 'offline', message: 'Your data can\'t be reached yet. It may be missing or out of date.' })
+  }, 10000)
+  for (const c of ['profile', 'gear', 'clothing', 'days', 'trips'] as Collection[]) {
+    db.collection(c).onSnapshot(
+      (snap) => {
+        const rows = snap.docs.map((d) => ({ ...(d.data() as object), id: d.id })) as Rec[]
+        // Keep local edits that have not been written yet.
+        const mine = [...pending.values()].filter((p) => p.c === c).map((p) => p.rec)
+        const merged = new Map(rows.map((r) => [r.id, r]))
+        for (const r of mine) merged.set(r.id, r)
+        commit({ ...state, [c]: [...merged.values()] })
+        if (!snap.metadata.fromCache) {
+          clearTimeout(timer)
+          if (backend.state !== 'error') setBackend({ state: 'ready' })
+        }
+      },
+      () => {
+        clearTimeout(timer)
+        setBackend({ state: 'error', message: 'Syncing stopped. Reload the page to reconnect.' })
+      },
+    )
+  }
+}
+if (ARTIFACT) void startArtifact()

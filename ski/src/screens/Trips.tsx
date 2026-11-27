@@ -4,7 +4,7 @@ import { GENERAL_APPS, GENERAL_RULES, PRACTICAL } from '../data/practical'
 import { COUNTRY_NAMES, FLAG, resortById, RESORTS, type Resort } from '../data/resorts'
 import { CONDITIONS } from '../data/templates'
 import { dateWarnings, MODE_LABEL, travelOptions } from '../data/travel'
-import { avalanche, forecast, history, verdict, weatherLabel, type Forecast } from '../lib/conditions'
+import { avalanche, depthOn, forecast, history, verdict, weatherLabel, type Forecast } from '../lib/conditions'
 import { live, newId, remove, upsert, useStore } from '../lib/store'
 import type { CondId, Discipline, SkiType, Trip } from '../lib/types'
 
@@ -157,7 +157,7 @@ function Conditions({ r, trip }: { r: Resort; trip: Trip }) {
   const fc = useAsync(`fc:${r.id}`, () => forecast(r))
   const ava = useAsync(r.avalanche.kind === 'link' ? null : `ava:${r.id}`, () => avalanche(r))
   const md = trip.start.slice(5)
-  const hist = useAsync(`hist:${r.id}:${md}`, () => history(r, md))
+  const hist = useAsync(`hist:${r.id}`, () => history(r))
   const until = daysBetween(today(), trip.start)
   const tripDays = fc.data?.days.filter((d) => d.date >= trip.start && d.date <= trip.end) ?? []
   const opens = new Date(new Date(trip.start + 'T12:00:00').getTime() - 15 * 864e5).toISOString().slice(0, 10)
@@ -166,7 +166,7 @@ function Conditions({ r, trip }: { r: Resort; trip: Trip }) {
     <section className="panel">
       <div className="between">
         <h2>Conditions</h2>
-        {fc.data && <span className="small muted">Updated {new Date(fc.data.fetchedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · Open-Meteo</span>}
+        {fc.data && <span className="small muted">Updated {new Date(fc.data.fetchedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · Open-Meteo</span>}
       </div>
 
       {fc.loading && <p className="muted">Loading the forecast…</p>}
@@ -215,7 +215,7 @@ function Conditions({ r, trip }: { r: Resort; trip: Trip }) {
             <div className="scroll-x">
               <table>
                 <thead><tr><th>Season</th><th className="num">Depth that day</th><th className="num">Season snowfall</th><th className="num">Avg depth Dec–Mar</th></tr></thead>
-                <tbody>{hist.data.seasons.map((s) => <tr key={s.label}><td>{s.label}</td><td className="num">{s.onDates ?? '–'} cm</td><td className="num">{s.snowfall} cm</td><td className="num">{s.meanDepth} cm</td></tr>)}</tbody>
+                <tbody>{depthOn(hist.data, md).map((s) => <tr key={s.label}><td>{s.label}</td><td className="num">{s.cm ?? '–'} cm</td><td className="num">{s.snowfall} cm</td><td className="num">{s.meanDepth} cm</td></tr>)}</tbody>
               </table>
             </div>
             <p className="note">Modelled at {hist.data.elevation} m (ERA5 reanalysis via Open-Meteo). Good for comparing years, not an exact on-piste depth.</p>
