@@ -282,6 +282,7 @@ body.dnd, body.dnd * { -webkit-user-select: none; user-select: none; cursor: gra
 .person .meta small { color: var(--muted); font-size: .86rem; }
 .userchip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px 4px 4px; font-weight: 600; font-size: .86rem; }
 .userchip i { width: 28px; height: 28px; border-radius: 50%; background: var(--dc); color: #fff; font-style: normal; display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
+.syncnote { margin: 8px max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); padding: 10px 14px; border-radius: 12px; background: var(--max-soft); border: 1px solid var(--max); color: var(--fg); font-size: .86rem; }
 .toast button { margin-left: 10px; border: 0; background: transparent; color: inherit; font-weight: 800; text-decoration: underline; padding: 0; }
 textarea.code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; min-height: 120px; }
 @media (prefers-reduced-motion: no-preference) { .btn, .chip, .set, .ex { transition: background-color .15s, border-color .15s, transform .1s; } .set:active, .btn:active { transform: scale(.97); } }
@@ -530,63 +531,149 @@ function dayMetaFor(prof) {
 
 /* ---------- storage: this browser, plus claude.ai sync when available ---------- */
 let S = null;
-let remoteRef = null, remoteFor = null, remoteTimer = null, remoteBusy = false, remoteDirty = false;
+/* ---------- shared sync ----------
+   Both people's data lives in one shared place so every phone sees the same thing:
+   profiles/<who>            programme, PRs, working maxes, the workout in progress
+   profiles/<who>/log/<id>   one document per logged workout (two phones can log at once) */
+const CLIENT = uid();
+let DB = null, syncUnsubs = [], syncPid = null, syncReady = false, readOnly = false;
+let pushTimer = null, pushing = false, pushAgain = false, logSynced = {}, pendingRender = false;
 function persistLocal() { if (!KEY || !S) return; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
-function save() { S.updatedAt = Date.now(); persistLocal(); if (remoteRef && P && remoteFor === P.id) { clearTimeout(remoteTimer); remoteTimer = setTimeout(pushRemote, 1200); } }
-async function pushRemote() {
-  if (!remoteRef || !P || remoteFor !== P.id) return;
-  if (remoteBusy) { remoteDirty = true; return; }
-  remoteBusy = true;
-  const ref = remoteRef, data = { json: JSON.stringify(S), updatedAt: S.updatedAt, profile: P.id };
-  try { await ref.set(data); } catch {}
-  remoteBusy = false;
-  if (remoteDirty) { remoteDirty = false; pushRemote(); }
+function save() { S.updatedAt = Date.now(); persistLocal(); schedulePush(); }
+function schedulePush() {
+  if (!syncReady || readOnly || !P || syncPid !== P.id) return;
+  clearTimeout(pushTimer); pushTimer = setTimeout(() => { pushTimer = null; pushNow(); }, 700);
+}
+const syncKey = pid => "training.synced." + pid;
+function markSynced(pid) { try { localStorage.setItem(syncKey(pid), JSON.stringify(Object.keys(logSynced))); } catch {} }
+function syncedBefore(pid) { try { const r = localStorage.getItem(syncKey(pid)); return r ? new Set(JSON.parse(r)) : null; } catch { return null; } }
+function withoutLog(st) { const c = Object.assign({}, st); delete c.log; return c; }
+async function pushNow() {
+  if (!syncReady || readOnly || !P || syncPid !== P.id) return;
+  if (pushing) { pushAgain = true; return; }
+  pushing = true;
+  const pid = P.id, st = S;
+  try {
+    await DB.doc("profiles/" + pid).set({ json: JSON.stringify(withoutLog(st)), updatedAt: st.updatedAt || Date.now(), by: CLIENT });
+    const col = DB.collection("profiles/" + pid + "/log"), now = {};
+    for (const e of st.log) {
+      const j = JSON.stringify(e); now[e.id] = 1;
+      if (logSynced[e.id] !== j) { await col.doc(e.id).set({ json: j, date: e.date, by: CLIENT }); logSynced[e.id] = j; }
+    }
+    for (const id of Object.keys(logSynced)) if (!now[id]) { await col.doc(id).delete(); delete logSynced[id]; }
+    if (syncPid === pid) markSynced(pid);
+  } catch (e) {
+    if (e && (e.code === "invalid_argument" || e.code === "not_granted" || e.code === "revoked")) { readOnly = true; render(); }
+  }
+  pushing = false;
+  if (pushAgain) { pushAgain = false; pushNow(); }
 }
 function readLocal(prof) {
   try { const r = JSON.parse(localStorage.getItem(prof.key) || "null"); return r && Array.isArray(r.days) ? r : null; } catch { return null; }
+}
+function stopSync() {
+  syncUnsubs.forEach(u => { try { u(); } catch {} }); syncUnsubs = [];
+  clearTimeout(pushTimer); pushTimer = null; syncReady = false; syncPid = null; logSynced = {}; readOnly = false;
 }
 function loadProfile(id) {
   const prof = PROFILES[id]; if (!prof) return;
   clearInterval(swInt); swRun = null; clearInterval(timerInt); timerInt = null; timerEnd = 0;
   editMode = false; exEdit = null; calMonth = null; calSel = today(); libQuery = ""; histLimit = 20;
+  stopSync();
   P = prof; KEY = prof.key; META = dayMetaFor(prof);
   S = migrate(readLocal(prof) || prof.seed());
   S.profile = prof.id; persistLocal();
   try { localStorage.setItem("training.profile", id); } catch {}
-  remoteRef = null; remoteFor = null; clearTimeout(remoteTimer);
-  connectRemote(id);
+  connectSync(id);
 }
 function signOut() {
   clearInterval(swInt); swRun = null; clearInterval(timerInt); timerInt = null; timerEnd = 0;
-  P = null; S = null; KEY = ""; remoteRef = null; remoteFor = null;
+  if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; pushNow(); }
+  stopSync(); P = null; S = null; KEY = "";
   try { localStorage.removeItem("training.profile"); } catch {}
   if (location.hash) location.hash = ""; render();
 }
-async function connectRemote(pid) {
+// re-render for changes from the other phone, but never under someone's fingers
+function softRender() {
+  const a = document.activeElement, busy = (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) || exEdit || G || document.querySelector("#layer .sheet");
+  if (busy) { pendingRender = true; return; }
+  pendingRender = false; render();
+}
+document.addEventListener("focusout", () => setTimeout(() => { if (pendingRender) softRender(); }, 50));
+async function adoptPrivateCopies(pid, user, db) { // data saved by earlier versions in this account's private space
+  try {
+    const id = await user.id(); if (!id) return;
+    const col = db.collection("data/users/" + id);
+    let best = null;
+    for (const name of ["state-" + pid, "state"]) {
+      const snap = await col.doc(name).get(); const d = snap.exists ? snap.data() : null;
+      if (!d || typeof d.json !== "string") continue;
+      const r = JSON.parse(d.json); if (!r || !Array.isArray(r.days)) continue;
+      if (name === "state" && r.title !== P.legacyTitle) continue;
+      if (!best || (d.updatedAt || 0) > best.u) best = { r, u: d.updatedAt || r.updatedAt || 0 };
+    }
+    if (best && P && P.id === pid && best.u > (S.updatedAt || 0)) {
+      const local = S.log;
+      S = migrate(best.r); S.profile = pid;
+      local.forEach(e => { if (!S.log.some(x => x.id === e.id)) S.log.push(e); });
+      persistLocal();
+    }
+  } catch {}
+}
+async function connectSync(pid) {
   try {
     if (!window.claude || typeof window.claude.use !== "function") return;
-    const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
-    if (!db || !user) return;
-    const id = await user.id();
-    if (!id || !P || P.id !== pid) return;
-    const col = db.collection("data/users/" + id);
-    const ref = col.doc(P.doc);
-    const snap = await ref.get();
-    const mine = snap.exists ? snap.data() : null;
-    let d = mine;
-    if (!d) { // data saved by the earlier one-person app
-      try {
-        const leg = await col.doc("state").get(), ld = leg.exists ? leg.data() : null;
-        if (ld && typeof ld.json === "string") { const r = JSON.parse(ld.json); if (r && r.title === P.legacyTitle) d = ld; }
-      } catch {}
+    if (DB === null) DB = (await window.claude.use("db")) || false;
+    if (!DB || !P || P.id !== pid) return;
+    const user = await window.claude.use("user");
+    if (user) {
+      try { if (user.can && (await user.can("data.write")) === false) readOnly = true; } catch {}
+      await adoptPrivateCopies(pid, user, DB);
     }
     if (!P || P.id !== pid) return;
-    if (d && typeof d.json === "string" && (d.updatedAt || 0) > (S.updatedAt || 0)) {
-      const r = JSON.parse(d.json);
-      if (r && Array.isArray(r.days)) { S = migrate(r); S.profile = pid; persistLocal(); render(); }
-    }
-    remoteRef = ref; remoteFor = pid;
-    if (!mine || (S.updatedAt || 0) > (mine.updatedAt || 0)) pushRemote();
+    const mainRef = DB.doc("profiles/" + pid), col = DB.collection("profiles/" + pid + "/log");
+    const [ms, ls] = await Promise.all([mainRef.get(), col.get()]);
+    if (!P || P.id !== pid) return;
+    const rMain = ms.exists ? ms.data() : null, rLog = {};
+    ls.docs.forEach(d => { const x = d.data(); if (x && typeof x.json === "string") rLog[d.id] = x.json; });
+    const before = syncedBefore(pid); // null: this phone has never synced this person
+    let useLocal;
+    if (!rMain || typeof rMain.json !== "string") useLocal = true;
+    else if (!before) { const lc = S.log.length, rc = Object.keys(rLog).length; useLocal = lc > rc || (lc === rc && (S.updatedAt || 0) > (rMain.updatedAt || 0)); }
+    else useLocal = (S.updatedAt || 0) > (rMain.updatedAt || 0);
+    const localLog = S.log;
+    if (!useLocal) { const r = JSON.parse(rMain.json); r.log = []; S = migrate(r); S.updatedAt = rMain.updatedAt; S.profile = pid; }
+    const merged = {};
+    Object.entries(rLog).forEach(([id, j]) => { try { merged[id] = JSON.parse(j); } catch {} });
+    localLog.forEach(e => { if (!merged[e.id] && (!before || !before.has(e.id))) merged[e.id] = e; }); // keep new local workouts, drop ones deleted elsewhere
+    S.log = Object.values(merged);
+    logSynced = Object.assign({}, rLog);
+    persistLocal();
+    syncPid = pid; syncReady = true; markSynced(pid);
+    if (!readOnly && (useLocal || S.log.some(e => logSynced[e.id] !== JSON.stringify(e)))) pushNow();
+    softRender();
+    syncUnsubs.push(mainRef.onSnapshot(snap => {
+      if (syncPid !== pid || !P || P.id !== pid || !snap.exists) return;
+      const x = snap.data();
+      if (!x || x.by === CLIENT || typeof x.json !== "string" || (x.updatedAt || 0) === (S.updatedAt || 0)) return;
+      if (pushTimer || pushing) return; // our own newer change is on its way
+      try { const r = JSON.parse(x.json); r.log = S.log; S = migrate(r); S.updatedAt = x.updatedAt; S.profile = pid; persistLocal(); softRender(); } catch {}
+    }, () => {}));
+    syncUnsubs.push(col.onSnapshot(qs => {
+      if (syncPid !== pid) return;
+      let changed = false;
+      qs.docChanges().forEach(ch => {
+        const id = ch.doc.id;
+        if (ch.type === "removed") {
+          if (id in logSynced) { delete logSynced[id]; const n = S.log.length; S.log = S.log.filter(e => e.id !== id); changed = changed || S.log.length !== n; }
+          return;
+        }
+        const x = ch.doc.data(); if (!x || typeof x.json !== "string" || logSynced[id] === x.json) return;
+        logSynced[id] = x.json;
+        try { const e = JSON.parse(x.json), i = S.log.findIndex(y => y.id === id); if (i >= 0) S.log[i] = e; else S.log.push(e); changed = true; } catch {}
+      });
+      if (changed) { persistLocal(); markSynced(pid); softRender(); }
+    }, () => {}));
   } catch {}
 }
 
@@ -1345,7 +1432,8 @@ function render() {
   const app = document.getElementById("app");
   if (!P) { app.innerHTML = viewWho(); document.title = "Fromatipour Workout"; return; }
   const r = route();
-  app.innerHTML = r.name === "day" ? viewDay(r) : r.name === "ex" ? viewEx(r) : r.name === "calendar" ? viewCalendar() : r.name === "backup" ? viewBackup() : r.name === "lib" ? viewLib() : r.name === "libex" ? viewLibEx(r) : viewHome();
+  const note = readOnly ? `<div class="syncnote" role="status"><b>Changes on this phone aren't being shared.</b> This account can only view the app. Johann can fix it in the Share menu by giving this account Editor access.</div>` : "";
+  app.innerHTML = note + (r.name === "day" ? viewDay(r) : r.name === "ex" ? viewEx(r) : r.name === "calendar" ? viewCalendar() : r.name === "backup" ? viewBackup() : r.name === "lib" ? viewLib() : r.name === "libex" ? viewLibEx(r) : viewHome());
   document.title = `Fromatipour Workout · ${P.name}`;
 }
 
