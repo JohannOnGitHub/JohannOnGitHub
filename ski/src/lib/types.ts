@@ -39,6 +39,7 @@ export type SkiDay = Rec & {
   visibility: Visibility
   newSnow: number | null // cm in last 24 h
   temp: number | null // °C
+  maxSpeed?: number | null // km/h, from a tracker app
   rating: number | null // 1–5
   highlight: string
   notes: string
@@ -83,6 +84,9 @@ export type Profile = Rec & {
   footWidth: number | null // mm
   favourites: string[] // resort ids
   notes: string
+  maxSpeed?: { kmh: number | null; place: string; date: string }
+  bestTrick?: { name: string; place: string; date: string }
+  achievements?: { id: string; title: string; date: string; note: string }[]
 }
 
 export type State = {

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Chips, fmtDate, SKI_TYPE, useAsync } from '../components/ui'
 import { FLAG, resortById } from '../data/resorts'
 import { ResortPicker } from './AddResort'
+import { RecordsSection } from './Records'
 import { DANGER_NAME, avalanche, forecast, verdict, weatherLabel } from '../lib/conditions'
 import { live, upsert, useStore } from '../lib/store'
 import type { Profile, Trip } from '../lib/types'
@@ -76,6 +77,7 @@ export function ProfileCard() {
           <div className="field"><label className="label" htmlFor="p-notes">Notes</label><textarea id="p-notes" value={p.notes} onChange={(e) => set({ notes: e.target.value })} /></div>
         </div>
       )}
+      <RecordsSection p={p} />
     </section>
   )
 }

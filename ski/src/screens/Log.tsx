@@ -81,7 +81,7 @@ function DayCard({ d, onEdit }: { d: SkiDay; onEdit: () => void }) {
   const [confirm, setConfirm] = useState(false)
   const r = resortById(d.resortId)
   const [y, m, dd] = d.date.split('-')
-  const meta = [d.newSnow != null && `${d.newSnow} cm new`, d.temp != null && `${d.temp} °C`, VIS[d.visibility]].filter(Boolean)
+  const meta = [d.maxSpeed != null && `${d.maxSpeed} km/h top`, d.newSnow != null && `${d.newSnow} cm new`, d.temp != null && `${d.temp} °C`, VIS[d.visibility]].filter(Boolean)
   return (
     <article className="day" style={{ ['--c' as string]: d.types[0] ? TYPE_COLOR[d.types[0]] : 'var(--line)' }}>
       <div className="date"><b className="num">{Number(dd)}</b><span>{new Date(`${y}-${m}-15`).toLocaleString('en', { month: 'short' })} {y}</span></div>
@@ -179,6 +179,7 @@ function DayForm({ initial, onDone }: { initial: SkiDay | null; onDone: () => vo
         </div>
         <div className="field"><label className="label" htmlFor="f-new">New snow (cm)</label><input id="f-new" type="number" inputMode="numeric" min={0} value={f.newSnow ?? ''} onChange={(e) => set({ newSnow: num(e.target.value) })} /></div>
         <div className="field"><label className="label" htmlFor="f-temp">Temp (°C)</label><input id="f-temp" type="number" inputMode="numeric" value={f.temp ?? ''} onChange={(e) => set({ temp: num(e.target.value) })} /></div>
+        <div className="field"><label className="label" htmlFor="f-speed">Top speed (km/h)</label><input id="f-speed" type="number" inputMode="decimal" min={0} max={250} value={f.maxSpeed ?? ''} onChange={(e) => set({ maxSpeed: num(e.target.value) })} placeholder="from Slopes" /></div>
       </div>
       <div className="field"><label className="label" htmlFor="f-hl">Best hit or line</label><input id="f-hl" value={f.highlight} maxLength={140} onChange={(e) => set({ highlight: e.target.value })} placeholder="Cliff off the ridge, ~4 m, stomped" /></div>
       <div className="field"><label className="label" htmlFor="f-notes">Notes</label><textarea id="f-notes" value={f.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="Boots, wax, crowds, what to try next time" /></div>

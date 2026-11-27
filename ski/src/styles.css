@@ -274,3 +274,8 @@ td.num, th.num { text-align: right; }
 .combo-list li.add { color: var(--accent); font-weight: 600; border-top: 1px solid var(--line); }
 .chip-x { display: inline-flex; align-items: center; gap: 6px; }
 .chip-x button { border: 0; background: none; padding: 0 2px; color: var(--muted); font-size: 1rem; line-height: 1; }
+
+/* ---------- Records ---------- */
+.record { background: var(--sunken); border-radius: 8px; padding: 12px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.record .big { font-family: var(--f-display); font-size: 1.7rem; line-height: 1.1; overflow-wrap: anywhere; }
+.badge { color: var(--good); font-weight: 600; }
