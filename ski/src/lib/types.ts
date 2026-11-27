@@ -59,13 +59,28 @@ export type Trip = Rec & {
   bookings?: string[] // booked items and costs from the source
 }
 
+/** A resort you added yourself (stored with your data, shown on the Resorts tab). */
+export type CustomResort = Rec & {
+  name: string
+  country: 'SE' | 'NO' | 'FR' | 'CH' | 'AT' | 'IT'
+  region: string
+  lat: number | null
+  lon: number | null
+  base: number | null // m
+  top: number | null // m
+  km: number | null
+  tags: string[]
+  web: string
+  notes: string
+}
+
 export type Profile = Rec & {
   level: string
   styles: SkiType[]
   focus: string // what you like most, e.g. jumps
   home: string
-  footLength: number | null // cm
-  footWidth: number | null // cm
+  footLength: number | null // mm
+  footWidth: number | null // mm
   favourites: string[] // resort ids
   notes: string
 }
@@ -74,6 +89,7 @@ export type State = {
   v: 1
   home: string
   profile: Profile[]
+  resorts: CustomResort[]
   gear: GearItem[]
   clothing: ClothingItem[]
   days: SkiDay[]

@@ -1,12 +1,25 @@
 import { useMemo, useState } from 'react'
 import { Chips, fmtDate, SKI_TYPE, useAsync } from '../components/ui'
-import { FLAG, resortById, RESORTS } from '../data/resorts'
+import { FLAG, resortById } from '../data/resorts'
+import { ResortPicker } from './AddResort'
 import { DANGER_NAME, avalanche, forecast, verdict, weatherLabel } from '../lib/conditions'
 import { live, upsert, useStore } from '../lib/store'
 import type { Profile, Trip } from '../lib/types'
 
+export const LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Pro / instructor']
+
+/** Boot fit hint from foot length and width in mm. */
+function feetText(l: number | null, w: number | null) {
+  if (!l || !w) return l ? `${l} mm long` : '–'
+  const mondo = (l / 10).toFixed(1)
+  const ratio = w / l
+  const fit = ratio >= 0.38 ? 'wide: look for a 102 mm+ last' : ratio >= 0.37 ? 'medium-wide: 100–102 mm last' : 'narrow to medium: 98–100 mm last'
+  return `${l} × ${w} mm · Mondopoint ${mondo} · ${fit}`
+}
+
 export function ProfileCard() {
   const all = useStore((s) => s.profile)
+  useStore((s) => s.resorts)
   const p = useMemo(() => live(all)[0], [all])
   const [edit, setEdit] = useState(false)
   if (!p) return null
@@ -25,7 +38,7 @@ export function ProfileCard() {
             <dt className="muted small">Loves</dt><dd style={{ margin: 0 }}>{p.focus}</dd>
             <dt className="muted small">Home</dt><dd style={{ margin: 0 }}>{p.home}</dd>
             <dt className="muted small">Feet</dt>
-            <dd style={{ margin: 0 }} className="num">{p.footLength ?? '–'} cm long × {p.footWidth ?? '–'} cm wide{p.footLength && p.footWidth && p.footWidth / p.footLength >= 0.38 ? ' · wide: look for a 102 mm+ last' : ''}</dd>
+            <dd style={{ margin: 0 }}>{feetText(p.footLength, p.footWidth)}</dd>
           </dl>
           <div className="stack" style={{ gap: 6 }}>
             <span className="label">Home resorts</span>
@@ -36,15 +49,29 @@ export function ProfileCard() {
       ) : (
         <div className="stack">
           <div className="fields">
-            <div className="field"><label className="label" htmlFor="p-level">Level</label><input id="p-level" value={p.level} onChange={(e) => set({ level: e.target.value })} /></div>
+            <div className="field"><label className="label" htmlFor="p-level">Level</label>
+              <select id="p-level" value={LEVELS.includes(p.level) ? p.level : 'Expert'} onChange={(e) => set({ level: e.target.value })}>
+                {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
             <div className="field"><label className="label" htmlFor="p-home">Home</label><input id="p-home" value={p.home} onChange={(e) => set({ home: e.target.value })} /></div>
-            <div className="field"><label className="label" htmlFor="p-fl">Foot length (cm)</label><input id="p-fl" type="number" step="0.1" value={p.footLength ?? ''} onChange={(e) => set({ footLength: e.target.value ? Number(e.target.value) : null })} /></div>
-            <div className="field"><label className="label" htmlFor="p-fw">Foot width (cm)</label><input id="p-fw" type="number" step="0.1" value={p.footWidth ?? ''} onChange={(e) => set({ footWidth: e.target.value ? Number(e.target.value) : null })} /></div>
+            <div className="field"><label className="label" htmlFor="p-fl">Foot length (mm)</label><input id="p-fl" type="number" inputMode="numeric" step="1" min="150" max="350" value={p.footLength ?? ''} onChange={(e) => set({ footLength: e.target.value ? Math.round(Number(e.target.value)) : null })} /></div>
+            <div className="field"><label className="label" htmlFor="p-fw">Foot width (mm)</label><input id="p-fw" type="number" inputMode="numeric" step="1" min="60" max="140" value={p.footWidth ?? ''} onChange={(e) => set({ footWidth: e.target.value ? Math.round(Number(e.target.value)) : null })} /></div>
           </div>
           <div className="field"><span className="label">Kinds of skiing</span><Chips label="Kinds of skiing" options={SKI_TYPE} value={p.styles} onToggle={(t) => set({ styles: p.styles.includes(t) ? p.styles.filter((x) => x !== t) : [...p.styles, t] })} /></div>
           <div className="field"><label className="label" htmlFor="p-focus">What you love most</label><input id="p-focus" value={p.focus} onChange={(e) => set({ focus: e.target.value })} /></div>
           <div className="field"><span className="label">Home resorts</span>
-            <div className="chips">{RESORTS.map((r) => <button type="button" key={r.id} className="chip" aria-pressed={p.favourites.includes(r.id)} onClick={() => set({ favourites: p.favourites.includes(r.id) ? p.favourites.filter((x) => x !== r.id) : [...p.favourites, r.id] })}>{r.name}</button>)}</div>
+            <div className="chips">
+              {p.favourites.map((id) => {
+                const r = resortById(id)
+                return r ? (
+                  <span key={id} className="tag chip-x">{FLAG[r.country]} {r.name}
+                    <button type="button" aria-label={`Remove ${r.name}`} onClick={() => set({ favourites: p.favourites.filter((x) => x !== id) })}>×</button>
+                  </span>
+                ) : null
+              })}
+            </div>
+            <ResortPicker label="Add a home resort" selected={p.favourites} onPick={(id) => set({ favourites: [...p.favourites, id] })} />
           </div>
           <div className="field"><label className="label" htmlFor="p-notes">Notes</label><textarea id="p-notes" value={p.notes} onChange={(e) => set({ notes: e.target.value })} /></div>
         </div>

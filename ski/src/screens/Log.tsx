@@ -136,6 +136,7 @@ function PhotoStrip({ photos }: { photos: Photo[] }) {
 }
 
 function DayForm({ initial, onDone }: { initial: SkiDay | null; onDone: () => void }) {
+  useStore((s) => s.resorts)
   const [f, setF] = useState(() => (initial ? { ...initial } : blank()))
   const [busy, setBusy] = useState(false)
   const set = (p: Partial<typeof f>) => setF({ ...f, ...p })

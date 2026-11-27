@@ -24,7 +24,7 @@ const gflights = (to: string, start?: string, end?: string) =>
     `Flights from Stockholm ARN to ${to}${start ? ` on ${start}` : ''}${end ? ` returning ${end}` : ''}`,
   )}`
 const gmaps = (r: Resort) =>
-  `https://www.google.com/maps/dir/?api=1&origin=Stockholm&destination=${r.lat},${r.lon}&travelmode=driving`
+  `https://www.google.com/maps/dir/?api=1&origin=Stockholm&destination=${isFinite(r.lat) ? `${r.lat},${r.lon}` : encodeURIComponent(r.name)}&travelmode=driving`
 const rome2rio = (r: Resort) => `https://www.rome2rio.com/s/Stockholm/${encodeURIComponent(r.name)}`
 const SEAT61 = { label: 'Seat61: Sweden to Europe by train', url: 'https://www.seat61.com/Sweden.htm' }
 const FLIX = { label: 'FlixBus', url: 'https://global.flixbus.com/' }
@@ -101,7 +101,13 @@ function alpeDHuez(r: Resort, start?: string, end?: string): TravelOption[] {
 }
 
 function generic(r: Resort, start?: string, end?: string): TravelOption[] {
-  const km = distanceKm(STOCKHOLM.lat, STOCKHOLM.lon, r.lat, r.lon)
+  const km = isFinite(r.lat) ? distanceKm(STOCKHOLM.lat, STOCKHOLM.lon, r.lat, r.lon) : NaN
+  if (!isFinite(km)) {
+    return [{
+      id: 'car', mode: 'car', title: 'Drive', time: 'see map', hours: 99, legs: ['Set the resort\'s position to get distances and times'], good: [], watch: [],
+      links: [{ label: 'Route on Google Maps', url: gmaps(r) }, { label: 'Rome2Rio overview', url: rome2rio(r) }],
+    }]
+  }
   const roadKm = Math.round((km * 1.3) / 10) * 10
   const nordic = r.country === 'SE' || r.country === 'NO'
   const out: TravelOption[] = []

@@ -56,6 +56,7 @@ export function TripCard({ t, go }: { t: Trip; go: (h: string) => void }) {
 }
 
 function NewTrip({ onCreate }: { onCreate: (id: string) => void }) {
+  useStore((s) => s.resorts)
   const [resortId, setResortId] = useState('')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')

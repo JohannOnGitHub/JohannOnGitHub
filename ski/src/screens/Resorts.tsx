@@ -3,13 +3,16 @@ import { Seg, useAsync } from '../components/ui'
 import { COUNTRY_NAMES, distanceKm, FLAG, RESORTS, STOCKHOLM, TAGS, type Country, type Resort, type Tag } from '../data/resorts'
 import { forecast, history } from '../lib/conditions'
 import { live, newId, upsert, useStore } from '../lib/store'
+import { AddResortForm } from './AddResort'
 
 type Sort = 'km' | 'vertical' | 'top' | 'distance' | 'days'
 const SORTS: Record<Sort, string> = { km: 'Km of pistes', vertical: 'Vertical', top: 'Top altitude', distance: 'Closest', days: 'Your days' }
-const MAX_VERT = Math.max(...RESORTS.map((r) => r.top - r.base))
+const dKm = (r: Resort) => (isFinite(r.lat) ? distanceKm(STOCKHOLM.lat, STOCKHOLM.lon, r.lat, r.lon) : Infinity)
 
 export default function Resorts({ go }: { go: (h: string) => void }) {
   const daysAll = useStore((s) => s.days)
+  useStore((s) => s.resorts) // re-render when you add a resort
+  const [adding, setAdding] = useState(false)
   const daysAt = useMemo(() => {
     const m = new Map<string, number>()
     for (const d of live(daysAll)) if (d.resortId) m.set(d.resortId, (m.get(d.resortId) ?? 0) + 1)
@@ -26,7 +29,7 @@ export default function Resorts({ go }: { go: (h: string) => void }) {
     if (sort === 'vertical') return b.top - b.base - (a.top - a.base)
     if (sort === 'top') return b.top - a.top
     if (sort === 'days') return (daysAt.get(b.id) ?? 0) - (daysAt.get(a.id) ?? 0)
-    return distanceKm(STOCKHOLM.lat, STOCKHOLM.lon, a.lat, a.lon) - distanceKm(STOCKHOLM.lat, STOCKHOLM.lon, b.lat, b.lon)
+    return dKm(a) - dKm(b)
   })
 
   return (
@@ -52,12 +55,14 @@ export default function Resorts({ go }: { go: (h: string) => void }) {
           </select>
           <Seg label="Sort by" value={sort} onChange={setSort} options={SORTS} />
           <span className="small muted">{list.length} resorts</span>
+          <button type="button" className="ghost" style={{ marginLeft: 'auto' }} onClick={() => setAdding(!adding)} aria-expanded={adding}>{adding ? 'Close' : 'Add a resort'}</button>
         </div>
+        {adding && <AddResortForm initialName={q} onDone={(id) => { setAdding(false); if (id) setQ('') }} />}
       </section>
       {list.length ? (
         <div className="grid3">{list.map((r) => <ResortCard key={r.id} r={r} days={daysAt.get(r.id) ?? 0} go={go} />)}</div>
       ) : (
-        <div className="empty"><h3>No resort has all of these</h3><p>Remove a filter.</p></div>
+        <div className="empty"><h3>No resort matches</h3><p>Remove a filter, or use Add a resort to add {q ? `“${q}”` : 'a new one'}.</p></div>
       )}
     </>
   )
@@ -66,14 +71,16 @@ export default function Resorts({ go }: { go: (h: string) => void }) {
 function ResortCard({ r, days, go }: { r: Resort; days: number; go: (h: string) => void }) {
   const [snow, setSnow] = useState(false)
   const vert = r.top - r.base
-  const dist = Math.round(distanceKm(STOCKHOLM.lat, STOCKHOLM.lon, r.lat, r.lon) / 10) * 10
+  const d = dKm(r)
+  const dist = isFinite(d) ? Math.round(d / 10) * 10 : null
+  const maxVert = Math.max(...RESORTS.map((x) => x.top - x.base))
   return (
     <article className="resort">
       <div className="between">
         <h3>{FLAG[r.country]} {r.name}</h3>
-        {days > 0 && <span className="tag">{days} {days === 1 ? 'day' : 'days'} logged</span>}
+        <span className="row" style={{ gap: 4 }}>{r.custom && <span className="tag">Added by you</span>}{days > 0 && <span className="tag">{days} {days === 1 ? 'day' : 'days'} logged</span>}</span>
       </div>
-      <p className="small muted">{r.area ? `${r.area} · ` : ''}{r.region} · {r.season}</p>
+      <p className="small muted">{[r.area, r.region, r.season].filter(Boolean).join(' · ')}</p>
       <div className="figs">
         <div><b>{r.km}</b><span>km pistes</span></div>
         <div><b>{vert.toLocaleString('en')}</b><span>m vertical</span></div>
@@ -81,7 +88,7 @@ function ResortCard({ r, days, go }: { r: Resort; days: number; go: (h: string) 
       </div>
       <div className="vbar" aria-label={`${r.base} to ${r.top} m`}>
         <div className="track"><div className="fill" style={{ left: `${(r.base / 4000) * 100}%`, width: `${(vert / 4000) * 100}%` }} /></div>
-        <span className="small muted num">{r.base}–{r.top} m · {Math.round((vert / MAX_VERT) * 100)}% of the biggest vertical here · {dist.toLocaleString('en')} km from Stockholm</span>
+        <span className="small muted num">{r.base}–{r.top} m · {Math.round((vert / maxVert) * 100)}% of the biggest vertical here · {dist != null ? `${dist.toLocaleString('en')} km from Stockholm` : 'position not set'}</span>
       </div>
       <div className="chips">{r.tags.map((t) => <span key={t} className="tag">{TAGS[t]}</span>)}</div>
       <p className="small">{r.about}</p>

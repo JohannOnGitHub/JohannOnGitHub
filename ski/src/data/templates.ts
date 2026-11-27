@@ -8,7 +8,7 @@ const GEAR: G[] = [
   // All mountain / freeride
   ['allmountain', 'Skis', true, 'have', 'Atomic Bent 110', 'Freeride and all-mountain, 110 mm waist'],
   ['allmountain', 'Bindings', true, 'unknown'],
-  ['allmountain', 'Boots', true, 'missing', '', 'Wide feet (26 cm × 10 cm). Shortlist: Dalbello IL Moro Boss, Armada AR One 130 MV, K2 Revolve Pro. Tried Atomic Hawx Prime 130 S BOA: tight in the toes, would need a liner heat-mold.'],
+  ['allmountain', 'Boots', true, 'missing', '', 'Wide feet (260 × 100 mm). Shortlist: Dalbello IL Moro Boss, Armada AR One 130 MV, K2 Revolve Pro. Tried Atomic Hawx Prime 130 S BOA: tight in the toes, would need a liner heat-mold.'],
   ['allmountain', 'Poles', true, 'unknown'],
   ['allmountain', 'Back protector', false, 'unknown'],
   ['allmountain', 'Avalanche transceiver', true, 'unknown', '', 'Needed for any off-piste'],
@@ -103,7 +103,7 @@ export function seedClothing(): ClothingItem[] {
 export function seedProfile(): Profile {
   return {
     id: 'me', updatedAt: 1, level: 'Expert', styles: ['freeride', 'piste', 'park'],
-    focus: 'Jumps: natural features, park and cliffs', home: 'Stockholm', footLength: 26, footWidth: 10,
+    focus: 'Jumps: natural features, park and cliffs', home: 'Stockholm', footLength: 260, footWidth: 100,
     favourites: ['stoten', 'idre', 'riksgransen', 'hemsedal', 'kittelfjall', 'hemavan'],
     notes: 'Early-season glacier picks: Zermatt and Sölden. Christmas options: Stöten or Idre, Löfsdalen as a snow-reliable back-up, La Clusaz abroad.',
   }

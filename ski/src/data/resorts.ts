@@ -2,6 +2,7 @@
 // autumn 2026 and are meant for comparing resorts, not for planning to the metre:
 // check the resort's own site before a trip. Live snow, history and avalanche data
 // are fetched in the app instead of being typed in here.
+import type { CustomResort } from '../lib/types'
 
 export type Country = 'SE' | 'NO' | 'FR' | 'CH' | 'AT' | 'IT'
 export type Tag = 'freeride' | 'park' | 'family' | 'touring' | 'glacier' | 'snowsure' | 'late' | 'big' | 'local' | 'night'
@@ -49,6 +50,7 @@ export type Resort = {
   airports: Hub[]
   station?: Hub
   transfer?: string // how to get from the station/airport up to the resort
+  custom?: boolean // added by you
 }
 
 const BERA = (massif: string): Avalanche => ({
@@ -433,6 +435,22 @@ export const MORE_RESORTS: Resort[] = ([
 ] as R[]).map(r)
 
 RESORTS.push(...MORE_RESORTS)
+export const BUILTIN_COUNT = RESORTS.length
+
+/** Your own resorts are appended to RESORTS so every screen can find them. */
+export function setCustomResorts(list: CustomResort[]) {
+  RESORTS.splice(BUILTIN_COUNT)
+  for (const c of list) {
+    if (c.deleted) continue
+    RESORTS.push({
+      id: c.id, name: c.name || 'Unnamed resort', country: c.country, region: c.region || '',
+      lat: c.lat ?? NaN, lon: c.lon ?? NaN, base: c.base ?? 0, top: c.top ?? 0, km: c.km ?? 0,
+      tags: c.tags.filter((t): t is Tag => t in TAGS), season: '', about: c.notes, web: c.web, passUrl: c.web,
+      avalanche: { kind: 'link', label: 'Look up the regional avalanche bulletin', url: 'https://www.avalanches.org/' },
+      airports: [], custom: true,
+    })
+  }
+}
 
 export const resortById = (id: string | null | undefined) => RESORTS.find((x) => x.id === id)
 

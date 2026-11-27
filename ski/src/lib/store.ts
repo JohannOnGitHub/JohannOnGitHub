@@ -3,16 +3,18 @@
 import { useSyncExternalStore } from 'react'
 import { seedClothing, seedGear, seedProfile } from '../data/templates'
 import { ARTIFACT, getDb, type DB } from './artifactDb'
+import { setCustomResorts } from '../data/resorts'
 import type { Rec, State } from './types'
 
 const KEY = 'skibase:v1'
-export type Collection = 'profile' | 'gear' | 'clothing' | 'days' | 'trips'
+export type Collection = 'profile' | 'resorts' | 'gear' | 'clothing' | 'days' | 'trips'
 
 function seed(): State {
   return {
     v: 1,
     home: 'Stockholm',
     profile: [seedProfile()],
+    resorts: [],
     gear: seedGear(),
     clothing: seedClothing(),
     days: [],
@@ -25,12 +27,17 @@ function seed(): State {
   }
 }
 
+/** Feet were stored in cm before; they are mm now. */
+function migrate(s: State): State {
+  return { ...s, profile: s.profile.map((p) => ({ ...p, footLength: p.footLength && p.footLength < 60 ? p.footLength * 10 : p.footLength, footWidth: p.footWidth && p.footWidth < 30 ? p.footWidth * 10 : p.footWidth })) }
+}
+
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {
       const s = JSON.parse(raw) as State
-      if (s && s.v === 1) return { ...seed(), ...s }
+      if (s && s.v === 1) return migrate({ ...seed(), ...s })
     }
   } catch {
     /* fall through to a fresh state */
@@ -38,11 +45,13 @@ function load(): State {
   return seed()
 }
 
-let state: State = ARTIFACT ? { v: 1, home: 'Stockholm', profile: [], gear: [], clothing: [], days: [], trips: [] } : load()
+let state: State = ARTIFACT ? { v: 1, home: 'Stockholm', profile: [], resorts: [], gear: [], clothing: [], days: [], trips: [] } : load()
+setCustomResorts(state.resorts ?? [])
 const listeners = new Set<() => void>()
 let changeHook: ((s: State) => void) | null = null
 
 function commit(next: State, fromSync = false) {
+  if (next.resorts !== state.resorts) setCustomResorts(next.resorts ?? [])
   state = next
   if (ARTIFACT) {
     listeners.forEach((l) => l())
@@ -108,7 +117,7 @@ export function merge(a: State, b: State): State {
     }
     return [...by.values()]
   }
-  return { ...a, home: a.home || b.home, profile: m(a.profile, b.profile), gear: m(a.gear, b.gear), clothing: m(a.clothing, b.clothing), days: m(a.days, b.days), trips: m(a.trips, b.trips) }
+  return { ...a, home: a.home || b.home, profile: m(a.profile, b.profile), resorts: m(a.resorts, b.resorts), gear: m(a.gear, b.gear), clothing: m(a.clothing, b.clothing), days: m(a.days, b.days), trips: m(a.trips, b.trips) }
 }
 
 export function exportJson() {
@@ -184,7 +193,7 @@ async function startArtifact() {
   const timer = setTimeout(() => {
     if (backend.state === 'loading') setBackend({ state: 'offline', message: 'Your data can\'t be reached yet. It may be missing or out of date.' })
   }, 10000)
-  for (const c of ['profile', 'gear', 'clothing', 'days', 'trips'] as Collection[]) {
+  for (const c of ['profile', 'resorts', 'gear', 'clothing', 'days', 'trips'] as Collection[]) {
     db.collection(c).onSnapshot(
       (snap) => {
         const rows = snap.docs.map((d) => ({ ...(d.data() as object), id: d.id })) as Rec[]
