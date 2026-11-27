@@ -50,8 +50,8 @@ export default function Home({ go }: { go: (h: string) => void }) {
       <div className="grid2">
         <section className="panel">
           <div className="between"><h2>Gear readiness</h2><button type="button" className="link" onClick={() => go('gear')}>Open gear</button></div>
-          {(['allmountain', 'park', 'touring'] as Discipline[]).map((d) => {
-            const c = coverage(gear.filter((g) => g.discipline === d || g.discipline === 'shared'))
+          {(['allmountain', 'park', 'touring', 'shared'] as (Discipline | 'shared')[]).map((d) => {
+            const c = coverage(gear.filter((g) => g.discipline === d))
             return (
               <div key={d} className="stack" style={{ gap: 4 }}>
                 <div className="between small"><span>{DISCIPLINES[d]}</span><span className="num">{c.have}/{c.total} ready</span></div>

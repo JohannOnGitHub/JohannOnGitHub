@@ -33,10 +33,10 @@ export default function Gear() {
       </div>
 
       <div className="grid3">
-        {(['allmountain', 'park', 'touring'] as Discipline[]).map((d) => {
-          const c = coverage(gear.filter((g) => g.discipline === d || g.discipline === 'shared'))
-          const missing = gear.filter((g) => (g.discipline === d || g.discipline === 'shared') && g.essential && g.status === 'missing').length
-          const unknown = gear.filter((g) => (g.discipline === d || g.discipline === 'shared') && g.status === 'unknown').length
+        {(['allmountain', 'park', 'touring', 'shared'] as (Discipline | 'shared')[]).map((d) => {
+          const c = coverage(gear.filter((g) => g.discipline === d))
+          const missing = gear.filter((g) => g.discipline === d && g.essential && g.status === 'missing').length
+          const unknown = gear.filter((g) => g.discipline === d && g.status === 'unknown').length
           return (
             <button key={d} type="button" className="panel quiet" style={{ textAlign: 'left', cursor: 'pointer', color: 'var(--ink)', background: 'var(--surface)', borderColor: tab === d ? 'var(--accent)' : 'var(--line)' }} onClick={() => setTab(d)}>
               <span className="between" style={{ width: '100%' }}>
