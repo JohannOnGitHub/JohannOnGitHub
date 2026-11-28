@@ -9,20 +9,24 @@ import { DISCIPLINES } from './Gear'
 type Pick = { rank: number; name: string; brand: string; url: string; why: string; sources: string[] }
 type Picks = { id: string; title: string; note: string; items: Pick[]; articles: { source: string; url: string }[]; updatedAt: number }
 
-/** The review sites the picks are drawn from. */
-export const REVIEW_SOURCES: { name: string; url: string; what: string }[] = [
-  { name: 'Blister', url: 'https://blisterreview.com/', what: 'The most in-depth long-term ski and gear reviews' },
-  { name: 'OutdoorGearLab', url: 'https://www.outdoorgearlab.com/', what: 'Side-by-side lab and field tests with scores' },
-  { name: 'Freeskier', url: 'https://www.freeskier.com/', what: 'Annual Buyer\'s Guide, freeride and park focus' },
-  { name: 'Newschoolers', url: 'https://www.newschoolers.com/', what: 'Park and freeride gear database and forum' },
-  { name: 'Downdays', url: 'https://www.downdays.eu/', what: 'European freeride and park gear tests' },
-  { name: 'Ski Magazine', url: 'https://www.skimag.com/', what: 'Large annual ski test and gear guides' },
-  { name: 'Switchback Travel', url: 'https://www.switchbacktravel.com/', what: 'Clear buying guides with comparison tables' },
-  { name: 'GearJunkie', url: 'https://gearjunkie.com/', what: 'Tested "best of" lists for gear and clothing' },
-  { name: 'Åka Skidor', url: 'https://www.akaskidor.se/', what: 'Swedish ski magazine with Nordic gear tests' },
-  { name: 'Fri Flyt', url: 'https://www.friflyt.no/', what: 'Norwegian freeride and touring gear tests' },
-  { name: 'Skipass', url: 'https://www.skipass.com/', what: 'French ski site with thousands of user-rated gear tests' },
-  { name: 'Freeride', url: 'https://www.freeride.se/', what: 'Swedish gear database, test pilots and forum' },
+/** The review sites the picks are drawn from: European first, then international. */
+export const REVIEW_SOURCES: { name: string; url: string; what: string; europe: boolean }[] = [
+  { name: 'Fall-Line', url: 'https://www.fall-line.co.uk/', what: 'UK ski magazine: 500+ products tested each season', europe: true },
+  { name: 'PlanetSKI', url: 'https://planetski.eu/', what: 'European ski news site with regular gear reviews', europe: true },
+  { name: 'ALPIN', url: 'https://www.alpin.de/', what: 'German mountain magazine with lab and field tests', europe: true },
+  { name: 'Skipass', url: 'https://www.skipass.com/', what: 'French ski site with thousands of user-rated gear tests', europe: true },
+  { name: 'PisteHors', url: 'https://pistehors.com/', what: 'French off-piste site with gear and avalanche guides', europe: true },
+  { name: 'Downdays', url: 'https://www.downdays.eu/', what: 'European freeride and park gear tests', europe: true },
+  { name: 'Freeride', url: 'https://www.freeride.se/', what: 'Swedish gear database, test pilots and forum', europe: true },
+  { name: 'Åka Skidor', url: 'https://www.akaskidor.se/', what: 'Swedish ski magazine with gear guides', europe: true },
+  { name: 'Fri Flyt', url: 'https://www.friflyt.no/', what: 'Norwegian freeride and touring gear tests', europe: true },
+  { name: 'Blister', url: 'https://blisterreview.com/', what: 'In-depth long-term reviews', europe: false },
+  { name: 'OutdoorGearLab', url: 'https://www.outdoorgearlab.com/', what: 'Side-by-side lab and field tests', europe: false },
+  { name: 'Freeskier', url: 'https://www.freeskier.com/', what: 'Annual Buyer\'s Guide, freeride and park focus', europe: false },
+  { name: 'Newschoolers', url: 'https://www.newschoolers.com/', what: 'Park and freeride gear database and forum', europe: false },
+  { name: 'Ski Magazine', url: 'https://www.skimag.com/', what: 'Large annual ski test', europe: false },
+  { name: 'Switchback Travel', url: 'https://www.switchbacktravel.com/', what: 'Buying guides with comparison tables', europe: false },
+  { name: 'GearJunkie', url: 'https://gearjunkie.com/', what: 'Tested "best of" lists', europe: false },
 ]
 
 /** Match a shopping item to a researched category by its name. */
@@ -87,14 +91,19 @@ export default function Shop() {
 
       <section className="panel">
         <h2>Where the picks come from</h2>
-        <p className="small muted">Picks are ranked from the tests, buyer's guides and user ratings of these twelve sites. Each pick shows which sites rated it; picks without a site are well-known options that no tested list covered.</p>
-        <div className="list">
-          {REVIEW_SOURCES.map((s, i) => (
-            <div key={s.name} className="item">
-              <div><a className="name" href={s.url} target="_blank" rel="noreferrer">{i + 1}. {s.name} ↗</a><div className="sub">{s.what}</div></div>
+        <p className="small muted">Picks are for skiers in Europe: European tests come first, international tests fill the gaps, and brands that are hard to buy in Europe are left out. Each pick shows which sites rated it; picks without a site are well-known options no test covered.</p>
+        {[true, false].map((eu) => (
+          <div key={String(eu)} className="stack" style={{ gap: 0 }}>
+            <span className="label">{eu ? 'European sources' : 'International sources'}</span>
+            <div className="list">
+              {REVIEW_SOURCES.filter((x) => x.europe === eu).map((x) => (
+                <div key={x.name} className="item">
+                  <div><a className="name" href={x.url} target="_blank" rel="noreferrer">{x.name} ↗</a><div className="sub">{x.what}</div></div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </section>
     </>
   )
