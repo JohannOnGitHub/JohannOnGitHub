@@ -5,9 +5,8 @@ import { watchCollection } from '../lib/artifactDb'
 import { live, upsert, useStore } from '../lib/store'
 import type { ClothingItem, GearItem } from '../lib/types'
 import { DISCIPLINES } from './Gear'
+import { ensurePicks, picksKey, type Picks } from '../lib/research'
 
-type Pick = { rank: number; name: string; brand: string; url: string; why: string; sources: string[] }
-type Picks = { id: string; title: string; note: string; items: Pick[]; articles: { source: string; url: string }[]; updatedAt: number }
 
 /** The review sites the picks are drawn from: European first, then international. */
 export const REVIEW_SOURCES: { name: string; url: string; what: string; europe: boolean }[] = [
@@ -29,18 +28,7 @@ export const REVIEW_SOURCES: { name: string; url: string; what: string; europe: 
   { name: 'GearJunkie', url: 'https://gearjunkie.com/', what: 'Tested "best of" lists', europe: false },
 ]
 
-/** Match a shopping item to a researched category by its name. */
-const KEYS: [RegExp, string][] = [
-  [/transceiver|beacon/i, 'transceiver'], [/probe/i, 'probe'], [/shovel/i, 'shovel'], [/helmet/i, 'helmet'],
-  [/goggle/i, 'goggles'], [/boot bag/i, 'boot-bag'], [/\bpoles?\b/i, 'poles'], [/scraper|brush|iron/i, 'tuning-kit'],
-  [/edge/i, 'edge-tuner'], [/wax/i, 'wax'], [/merino.*heavy|heavy.*base/i, 'base-top-heavy'], [/merino.*light|light.*base/i, 'base-top-light'],
-  [/base layer bottom|long johns/i, 'base-bottoms'], [/fleece/i, 'fleece'], [/belay|summit puffy|parka/i, 'belay-puffy'], [/vest/i, 'vest'],
-  [/liner glove/i, 'liner-gloves'], [/mitten/i, 'mittens'], [/balaclava/i, 'balaclava'], [/beanie/i, 'beanie'], [/sock/i, 'ski-socks'],
-  [/warmer/i, 'hand-warmers'], [/apr[eè]s/i, 'apres-boots'], [/sunglass|glacier glass|category 4/i, 'glacier-glasses'],
-]
-const keyFor = (name: string) => KEYS.find(([re]) => re.test(name))?.[1] ?? null
-
-type Row = { id: string; kind: 'gear' | 'clothing'; name: string; model: string; status: 'missing' | 'upgrade'; essential: boolean; purpose: string[]; key: string | null; src: GearItem | ClothingItem }
+type Row = { id: string; kind: 'gear' | 'clothing'; name: string; model: string; status: 'missing' | 'upgrade'; essential: boolean; purpose: string[]; key: string; src: GearItem | ClothingItem }
 
 export default function Shop() {
   const gearAll = useStore((s) => s.gear)
@@ -56,11 +44,11 @@ export default function Shop() {
   const rows = useMemo<Row[]>(() => {
     const g = live(gearAll).filter((x) => x.status === 'missing' || x.status === 'upgrade').map<Row>((x) => ({
       id: x.id, kind: 'gear', name: x.slot, model: x.model, status: x.status as Row['status'], essential: x.essential,
-      purpose: [x.discipline === 'shared' ? 'Any skiing' : DISCIPLINES[x.discipline]], key: keyFor(x.slot), src: x,
+      purpose: [x.discipline === 'shared' ? 'Any skiing' : DISCIPLINES[x.discipline]], key: picksKey(x.slot), src: x,
     }))
     const c = live(clothesAll).filter((x) => x.status === 'missing' || x.status === 'upgrade').map<Row>((x) => ({
       id: x.id, kind: 'clothing', name: x.name, model: x.model, status: x.status as Row['status'], essential: false,
-      purpose: x.conditions.map((k) => CONDITIONS[k].name), key: keyFor(x.name), src: x,
+      purpose: x.conditions.map((k) => CONDITIONS[k].name), key: picksKey(x.name), src: x,
     }))
     return [...g.sort((a, b) => Number(b.essential) - Number(a.essential)), ...c]
   }, [gearAll, clothesAll])
@@ -84,7 +72,7 @@ export default function Shop() {
       </div>
 
       {shown.length ? (
-        <div className="stack">{shown.map((r) => <ShopItem key={r.id} r={r} picks={r.key ? picks?.get(r.key) : undefined} picksError={picksError} loaded={picks !== null} />)}</div>
+        <div className="stack">{shown.map((r) => <ShopItem key={r.id} r={r} picks={picks?.get(r.key)} picksError={picksError} loaded={picks !== null} />)}</div>
       ) : (
         <div className="empty"><h3>Nothing to buy</h3><p>Mark items as Missing or Replace on the Gear and Clothing pages and they show up here.</p></div>
       )}
@@ -109,8 +97,17 @@ export default function Shop() {
   )
 }
 
-function ShopItem({ r, picks, picksError, loaded }: { r: Row; picks?: Picks; picksError: string | null; loaded: boolean }) {
+function ShopItem({ r, picks: saved, picksError, loaded }: { r: Row; picks?: Picks; picksError: string | null; loaded: boolean }) {
   const [open, setOpen] = useState(false)
+  const [asked, setAsked] = useState<{ state: 'idle' | 'busy' | 'failed'; picks?: Picks }>({ state: 'idle' })
+  const picks = saved ?? asked.picks
+  const research = () => {
+    setAsked({ state: 'busy' })
+    ensurePicks(r.name, r.purpose.join(', ')).then(
+      (p) => setAsked(p ? { state: 'idle', picks: p } : { state: 'failed' }),
+      () => setAsked({ state: 'failed' }),
+    )
+  }
   const bought = () => {
     if (r.kind === 'gear') upsert('gear', { ...(r.src as GearItem), status: 'have' })
     else upsert('clothing', { ...(r.src as ClothingItem), status: 'have' })
@@ -129,7 +126,7 @@ function ShopItem({ r, picks, picksError, loaded }: { r: Row; picks?: Picks; pic
           {r.model && <span className="small muted">Current: {r.model}</span>}
         </div>
         <div className="row">
-          <button type="button" className={open ? '' : 'ghost'} onClick={() => setOpen(!open)} aria-expanded={open}>
+          <button type="button" className={open ? '' : 'ghost'} onClick={() => { if (!open && !picks && loaded && asked.state === 'idle') research(); setOpen(!open) }} aria-expanded={open}>
             {open ? 'Hide picks' : picks ? `Top ${picks.items.length} picks` : 'Top picks'}
           </button>
           <button type="button" className="quiet" onClick={bought}>Bought it</button>
@@ -154,10 +151,22 @@ function ShopItem({ r, picks, picksError, loaded }: { r: Row; picks?: Picks; pic
             {picks.articles.length > 0 && (
               <p className="small">Read the tests: {picks.articles.map((a, i) => <span key={a.url}>{i > 0 && ' · '}<a href={a.url} target="_blank" rel="noreferrer">{a.source}</a></span>)}</p>
             )}
-            <p className="note">Researched by Claude, {new Date(picks.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}. Prices and models change; check the brand site.</p>
+            <p className="note">
+              {picks.generated === 'claude'
+                ? `Suggested by Claude from its own knowledge on ${new Date(picks.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}, not from a live search of the review sites. Ask Claude in a chat for a fully researched list.`
+                : `Researched by Claude from the review sites, ${new Date(picks.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.`} Prices and models change; check the brand site.
+            </p>
           </div>
         ) : (
-          <p className="small muted">{!loaded ? (picksError ?? 'Loading picks…') : 'No picks researched for this item yet. Ask Claude to research it and the top 10 will appear here.'}</p>
+          <div className="stack" style={{ gap: 6 }}>
+            <p className="small muted">
+              {!loaded ? (picksError ?? 'Loading picks…')
+                : asked.state === 'busy' ? 'Claude is finding the best options for this item…'
+                : asked.state === 'failed' ? 'Picks could not be found right now.'
+                : 'No picks for this item yet.'}
+            </p>
+            {loaded && asked.state !== 'busy' && <div><button type="button" className="quiet" onClick={research}>Find picks with Claude</button></div>}
+          </div>
         )
       )}
     </article>

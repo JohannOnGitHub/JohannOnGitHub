@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { StatusSelect, toast } from '../components/ui'
 import { CONDITIONS } from '../data/templates'
 import { live, newId, remove, upsert, useStore } from '../lib/store'
+import { ensurePicks } from '../lib/research'
 import type { ClothingItem, CondId } from '../lib/types'
 
 const LAYERS: Record<ClothingItem['layer'], string> = {
@@ -116,6 +117,7 @@ function AddClothing({ cond }: { cond: CondId | 'all' }) {
         if (!name.trim()) return
         upsert('clothing', { id: newId('c'), updatedAt: 0, name: name.trim(), layer, model: '', status: 'have', conditions: cond === 'all' ? ['normal'] : [cond], note: '' })
         setName('')
+        void ensurePicks(name.trim(), cond === 'all' ? 'Clothing' : CONDITIONS[cond].name).catch(() => null) // picks ready when it lands on the shopping list
         toast('Item added')
       }}
     >

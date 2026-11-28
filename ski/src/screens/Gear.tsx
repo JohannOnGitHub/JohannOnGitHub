@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Seg, STATUS, StatusSelect, toast } from '../components/ui'
 import { live, newId, remove, upsert, useStore } from '../lib/store'
+import { ensurePicks } from '../lib/research'
 import type { Discipline, GearItem, Status } from '../lib/types'
 
 export const DISCIPLINES: Record<Discipline | 'shared', string> = {
@@ -123,6 +124,7 @@ function AddGear({ discipline }: { discipline: Discipline | 'shared' }) {
         if (!slot.trim()) return
         upsert('gear', { id: newId('g'), updatedAt: 0, discipline, slot: slot.trim(), model: '', status, essential: false, note: '' })
         setSlot('')
+        void ensurePicks(slot.trim(), DISCIPLINES[discipline]).catch(() => null) // picks ready when it lands on the shopping list
         toast('Item added')
       }}
     >
