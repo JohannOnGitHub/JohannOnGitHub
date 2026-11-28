@@ -66,7 +66,7 @@ export type Trip = Rec & {
 /** A resort you added yourself (stored with your data, shown on the Resorts tab). */
 export type CustomResort = Rec & {
   name: string
-  country: 'SE' | 'NO' | 'FR' | 'CH' | 'AT' | 'IT'
+  country: 'SE' | 'NO' | 'FR' | 'CH' | 'AT' | 'IT' | 'DE'
   region: string
   lat: number | null
   lon: number | null

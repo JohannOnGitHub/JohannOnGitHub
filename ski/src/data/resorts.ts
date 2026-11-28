@@ -4,7 +4,7 @@
 // are fetched in the app instead of being typed in here.
 import type { CustomResort } from '../lib/types'
 
-export type Country = 'SE' | 'NO' | 'FR' | 'CH' | 'AT' | 'IT'
+export type Country = 'SE' | 'NO' | 'FR' | 'CH' | 'AT' | 'IT' | 'DE'
 export type Tag = 'freeride' | 'park' | 'family' | 'touring' | 'glacier' | 'snowsure' | 'late' | 'big' | 'local' | 'night'
 
 export const TAGS: Record<Tag, string> = {
@@ -432,6 +432,20 @@ export const MORE_RESORTS: Resort[] = ([
   ['sestriere', 'Sestriere', 'IT', 'Piedmont', 44.957, 6.879, 1350, 2800, 400, ['family', 'big'], 'Early Dec – mid Apr', 'Via Lattea linked to Montgenèvre in France.', 'https://www.vialattea.it/', AINEVA, [TRN(100)], { name: 'Oulx', km: 22 }, undefined, 'Via Lattea'],
   ['monterosa', 'Monterosa (Alagna)', 'IT', 'Piedmont / Aosta', 45.850, 7.940, 1212, 3275, 180, ['freeride', 'touring'], 'Early Dec – mid Apr', 'Alagna is a freeride mecca: huge off-piste lines and heliskiing.', 'https://www.monterosaski.com/', AINEVA, [MXP(110), TRN(170)]],
   ['bormio', 'Bormio', 'IT', 'Lombardy', 46.467, 10.375, 1225, 3012, 50, ['freeride'], 'Late Nov – mid Apr', 'Stelvio World Cup downhill and 1 800 m of vertical.', 'https://www.bormioski.eu/', AINEVA, [{ name: 'Bergamo', code: 'BGY', km: 190 }]],
+  // ---------- More glaciers ----------
+  ['pitztal', 'Pitztal Glacier', 'AT', 'Tyrol, Pitztal', 46.925, 10.880, 2840, 3440, 43, ['glacier', 'snowsure', 'freeride'], 'Late Sep – early May', 'Tyrol\'s highest ski area, under the Wildspitze, with the Café 3440 at the top. Linked on one pass with Rifflsee.', 'https://www.pitztal.com/', { kind: 'euregio', region: 'AT-07-20' }, [INN(90)], { name: 'Imst-Pitztal', km: 45 }, 'Bus from Imst-Pitztal station, then the underground Pitzexpress funicular.'],
+  ['kaunertal', 'Kaunertal Glacier', 'AT', 'Tyrol, Kaunertal', 46.865, 10.715, 2150, 3108, 38, ['glacier', 'snowsure', 'park'], 'Oct – early Jun', 'Quiet, high glacier with long seasons and an early-season park.', 'https://www.kaunertaler-gletscher.at/', { kind: 'euregio', region: 'AT-07-20' }, [INN(110)], { name: 'Landeck-Zams', km: 50 }],
+  ['molltal', 'Mölltal Glacier', 'AT', 'Carinthia', 46.990, 13.000, 1300, 3122, 53, ['glacier', 'snowsure'], 'Late Sep – early May', 'Carinthia\'s glacier, reached by an underground funicular; long runs down to the valley in winter.', 'https://www.gletscher.co.at/', LAWIS('Lawinenwarndienst Kärnten', 'https://lawinenwarndienst.ktn.gv.at/'), [SZG(170)], { name: 'Mallnitz-Obervellach', km: 25 }],
+  ['dachstein', 'Dachstein Glacier', 'AT', 'Styria, Ramsau', 47.470, 13.620, 2550, 2700, 4, ['glacier', 'touring'], 'Oct – Jun (lifts and conditions vary)', 'Small glacier area above Ramsau with cross-country trails and short runs; mostly for touring and training.', 'https://www.derdachstein.at/', LAWIS('Lawinenwarndienst Steiermark', 'https://www.lawine-steiermark.at/'), [SZG(90)], { name: 'Schladming', km: 20 }],
+  ['glacier3000', 'Glacier 3000', 'CH', 'Vaud / Bern', 46.330, 7.210, 1350, 2971, 28, ['glacier', 'freeride', 'snowsure'], 'Early Nov – early May', 'Above Les Diablerets and Gstaad, with off-piste down the Martisberg and the Peak Walk bridge.', 'https://www.glacier3000.ch/', { kind: 'slf', region: 'CH-1222' }, [GVA(140)], { name: 'Gstaad', km: 18 }],
+  ['diavolezza', 'Diavolezza', 'CH', 'Graubünden, Engadin', 46.410, 9.970, 2093, 2978, 25, ['glacier', 'freeride', 'touring'], 'Late Oct – May', 'Famous glacier descent over the Morteratsch glacier, with views of Piz Bernina.', 'https://www.diavolezza.ch/', { kind: 'slf', region: 'CH-7112' }, [ZRH(220)], { name: 'Bernina Diavolezza (Rhaetian Railway)', km: 0 }, undefined, 'Engadin St. Moritz'],
+  ['valsenales', 'Val Senales Glacier', 'IT', 'South Tyrol', 46.780, 10.790, 2011, 3212, 35, ['glacier', 'snowsure'], 'Late Sep – early May', 'South Tyrol\'s glacier, where Ötzi was found; early-season training base.', 'https://www.schnalstal.com/', { kind: 'euregio', region: 'IT-32-BZ-03' }, [INN(110), VRN(200)], { name: 'Merano', km: 30 }],
+  ['stelvio', 'Passo dello Stelvio', 'IT', 'Lombardy / South Tyrol', 46.530, 10.450, 2760, 3450, 20, ['glacier', 'park'], 'Late May – early Nov (summer only)', 'Summer glacier skiing on the Stelvio pass; the pass road is closed in winter.', 'https://www.stelviopass.com/', AINEVA, [{ name: 'Bergamo', code: 'BGY', km: 210 }], undefined, 'By car over the pass from Bormio (summer only).'],
+  ['presena', 'Presena Glacier (Passo Tonale)', 'IT', 'Trentino / Lombardy', 46.220, 10.580, 1883, 3016, 100, ['glacier', 'family', 'snowsure'], 'Late Oct – May', 'Glacier above Passo Tonale, linked with Ponte di Legno.', 'https://www.pontedilegnotonale.com/', AINEVA, [VRN(170), { name: 'Bergamo', code: 'BGY', km: 150 }], undefined, undefined, 'Pontedilegno-Tonale'],
+  ['zugspitze', 'Zugspitze', 'DE', 'Bavaria', 47.420, 10.990, 2000, 2720, 20, ['glacier', 'snowsure'], 'Nov – early May', 'Germany\'s only glacier ski area, on the Schneeferner below the country\'s highest peak.', 'https://zugspitze.de/', LAWIS('Lawinenwarndienst Bayern', 'https://www.lawinenwarndienst-bayern.de/'), [MUC(130), INN(60)], { name: 'Garmisch-Partenkirchen (Zugspitzbahn)', km: 0 }, 'Cog railway from Garmisch, then the glacier cable car.'],
+  ['fonna', 'Fonna Glacier Ski Resort', 'NO', 'Vestland, Folgefonna', 60.050, 6.330, 1200, 1440, 3, ['glacier', 'park', 'late'], 'Late Apr – Aug (summer only)', 'Summer skiing and a park on the Folgefonna glacier.', 'https://www.fonna.no/', { kind: 'nve' }, [BGO(130)]],
+  ['galdhopiggen', 'Galdhøpiggen Sommerskisenter', 'NO', 'Innlandet, Jotunheimen', 61.630, 8.380, 1850, 2150, 3, ['glacier', 'touring', 'late'], 'Late May – Oct (summer only)', 'Summer skiing on the Vesljuvbreen glacier below Norway\'s highest peak.', 'https://www.galdhopiggensommerskisenter.no/', { kind: 'nve' }, [OSL(330)]],
+  ['stryn', 'Stryn Sommerski', 'NO', 'Vestland', 61.900, 7.180, 1050, 1580, 10, ['glacier', 'park', 'late'], 'Late May – July (summer only)', 'Classic Norwegian summer ski centre on the Tystigbreen glacier, popular with park and race camps.', 'https://www.strynsommerski.no/', { kind: 'nve' }, [{ name: 'Ålesund', code: 'AES', km: 160 }]],
 ] as R[]).map(r)
 
 RESORTS.push(...MORE_RESORTS)
@@ -454,8 +468,8 @@ export function setCustomResorts(list: CustomResort[]) {
 
 export const resortById = (id: string | null | undefined) => RESORTS.find((x) => x.id === id)
 
-export const COUNTRY_NAMES: Record<Country, string> = { SE: 'Sweden', NO: 'Norway', FR: 'France', CH: 'Switzerland', AT: 'Austria', IT: 'Italy' }
-export const FLAG: Record<Country, string> = { SE: '🇸🇪', NO: '🇳🇴', FR: '🇫🇷', CH: '🇨🇭', AT: '🇦🇹', IT: '🇮🇹' }
+export const COUNTRY_NAMES: Record<Country, string> = { SE: 'Sweden', NO: 'Norway', FR: 'France', CH: 'Switzerland', AT: 'Austria', IT: 'Italy', DE: 'Germany' }
+export const FLAG: Record<Country, string> = { SE: '🇸🇪', NO: '🇳🇴', FR: '🇫🇷', CH: '🇨🇭', AT: '🇦🇹', IT: '🇮🇹', DE: '🇩🇪' }
 
 /** Great-circle distance in km. */
 export function distanceKm(aLat: number, aLon: number, bLat: number, bLon: number) {

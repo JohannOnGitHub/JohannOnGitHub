@@ -94,6 +94,18 @@ export const PRACTICAL: Record<Country, Practical> = {
     ],
     rules: ['Motorways need a vignette (digital vignette, buy before you drive).'],
   },
+  DE: {
+    currency: 'EUR',
+    phones: [
+      { number: '112', what: 'Emergency, including mountain rescue (Bergwacht)' },
+      { number: '110', what: 'Police' },
+    ],
+    apps: [
+      { name: 'Lawinenwarndienst Bayern', what: 'Bavarian avalanche bulletin', url: 'https://www.lawinenwarndienst-bayern.de/' },
+      { name: 'Bergwacht SOS / Echo112', what: 'Sends your exact position to rescue services', url: 'https://www.echo112.com/' },
+    ],
+    rules: ['Germany\'s Alpine resorts are close to Austria: Zugspitze is an hour from Innsbruck airport.'],
+  },
   IT: {
     currency: 'EUR',
     phones: [
