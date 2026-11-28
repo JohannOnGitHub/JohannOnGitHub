@@ -21,6 +21,8 @@ export const REVIEW_SOURCES: { name: string; url: string; what: string }[] = [
   { name: 'GearJunkie', url: 'https://gearjunkie.com/', what: 'Tested "best of" lists for gear and clothing' },
   { name: 'Åka Skidor', url: 'https://www.akaskidor.se/', what: 'Swedish ski magazine with Nordic gear tests' },
   { name: 'Fri Flyt', url: 'https://www.friflyt.no/', what: 'Norwegian freeride and touring gear tests' },
+  { name: 'Skipass', url: 'https://www.skipass.com/', what: 'French ski site with thousands of user-rated gear tests' },
+  { name: 'Freeride', url: 'https://www.freeride.se/', what: 'Swedish gear database, test pilots and forum' },
 ]
 
 /** Match a shopping item to a researched category by its name. */
@@ -85,7 +87,7 @@ export default function Shop() {
 
       <section className="panel">
         <h2>Where the picks come from</h2>
-        <p className="small muted">Picks are ranked from the tests and buyer's guides of these ten sites. Each pick shows which sites rated it; picks without a site are well-known options that no tested list covered.</p>
+        <p className="small muted">Picks are ranked from the tests, buyer's guides and user ratings of these twelve sites. Each pick shows which sites rated it; picks without a site are well-known options that no tested list covered.</p>
         <div className="list">
           {REVIEW_SOURCES.map((s, i) => (
             <div key={s.name} className="item">
