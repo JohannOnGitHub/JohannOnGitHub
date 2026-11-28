@@ -248,3 +248,25 @@ export function verdict(d: ForecastDay): { label: string; tone: 'good' | 'ok' | 
   if (d.sun >= 6) return { label: 'Bluebird', tone: 'good' }
   return { label: 'Mixed', tone: 'ok' }
 }
+
+// ---------------- Snow summary for filtering resorts ----------------
+
+export type SnowSummary = Record<string, { meanDepth: number; snowfall: number; daysOver50: number; elevation: number; seasons: number }>
+/** Above this the model grid cell is a glacier where snow piles up for years. */
+export const GLACIER_CM = 400
+
+/** Five-season averages for every resort (one snapshot written by Claude). */
+export async function snowSummary(): Promise<SnowSummary> {
+  if (ARTIFACT) return (await readSnapshot<{ resorts: SnowSummary }>('summary-snow')).resorts
+  const out: SnowSummary = {}
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (!k?.startsWith('skibase:cache:hist2:')) continue
+    const h = cacheGet<History>(k.slice('skibase:cache:'.length), 365 * DAY)
+    if (!h?.seasons.length) continue
+    const avg = (f: 'meanDepth' | 'snowfall' | 'daysOver50') => Math.round(h.seasons.reduce((a, s) => a + s[f], 0) / h.seasons.length)
+    out[k.slice('skibase:cache:hist2:'.length)] = { meanDepth: avg('meanDepth'), snowfall: avg('snowfall'), daysOver50: avg('daysOver50'), elevation: h.elevation, seasons: h.seasons.length }
+  }
+  return out
+}
+export const depthLabel = (cm: number) => (cm > GLACIER_CM ? `${GLACIER_CM}+` : String(cm))

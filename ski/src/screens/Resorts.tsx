@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Seg, useAsync } from '../components/ui'
 import { COUNTRY_NAMES, distanceKm, FLAG, RESORTS, STOCKHOLM, TAGS, type Country, type Resort, type Tag } from '../data/resorts'
-import { forecast, history } from '../lib/conditions'
+import { depthLabel, forecast, GLACIER_CM, history, snowSummary, type SnowSummary } from '../lib/conditions'
 import { live, newId, upsert, useStore } from '../lib/store'
 import { AddResortForm } from './AddResort'
 
-type Sort = 'km' | 'vertical' | 'top' | 'distance' | 'days'
-const SORTS: Record<Sort, string> = { km: 'Km of pistes', vertical: 'Vertical', top: 'Top altitude', distance: 'Closest', days: 'Your days' }
+type Sort = 'km' | 'vertical' | 'top' | 'snow' | 'distance' | 'days'
+const SORTS: Record<Sort, string> = { km: 'Km of pistes', vertical: 'Vertical', top: 'Top altitude', snow: 'Snow depth', distance: 'Closest', days: 'Your days' }
+const DEPTHS = [0, 30, 50, 75, 100, 150]
 const dKm = (r: Resort) => (isFinite(r.lat) ? distanceKm(STOCKHOLM.lat, STOCKHOLM.lon, r.lat, r.lon) : Infinity)
 
 export default function Resorts({ go }: { go: (h: string) => void }) {
@@ -22,9 +23,13 @@ export default function Resorts({ go }: { go: (h: string) => void }) {
   const [country, setCountry] = useState<Country | 'all'>('all')
   const [sort, setSort] = useState<Sort>('km')
   const [q, setQ] = useState('')
+  const [minDepth, setMinDepth] = useState(0)
+  const snow = useAsync('snow-summary', snowSummary)
+  const depthOf = (r: Resort) => snow.data?.[r.id]?.meanDepth
   const norm = (x: string) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
-  const list = RESORTS.filter((r) => (country === 'all' || r.country === country) && tags.every((t) => r.tags.includes(t)) && (!q || norm(`${r.name} ${r.area ?? ''} ${r.region}`).includes(norm(q)))).sort((a, b) => {
+  const list = RESORTS.filter((r) => (country === 'all' || r.country === country) && tags.every((t) => r.tags.includes(t)) && (!q || norm(`${r.name} ${r.area ?? ''} ${r.region}`).includes(norm(q))) && (!minDepth || (depthOf(r) ?? -1) >= minDepth)).sort((a, b) => {
+    if (sort === 'snow') return (depthOf(b) ?? -1) - (depthOf(a) ?? -1)
     if (sort === 'km') return b.km - a.km
     if (sort === 'vertical') return b.top - b.base - (a.top - a.base)
     if (sort === 'top') return b.top - a.top
@@ -38,7 +43,7 @@ export default function Resorts({ go }: { go: (h: string) => void }) {
         <div>
           <div className="label">Discover</div>
           <h1>Resorts</h1>
-          <p>Compare size, vertical and snow. Snow data is loaded live: today's modelled depth and the average of the last five seasons.</p>
+          <p>Compare size, vertical and snow. Average snow depth is the modelled natural snow at mid-mountain, December to March, over the last five seasons. It leaves out machine-made snow, so small hills with snow-making look thin.</p>
         </div>
       </div>
       <section className="panel">
@@ -53,14 +58,17 @@ export default function Resorts({ go }: { go: (h: string) => void }) {
             <option value="all">All countries</option>
             {(Object.keys(COUNTRY_NAMES) as Country[]).map((c) => <option key={c} value={c}>{FLAG[c]} {COUNTRY_NAMES[c]}</option>)}
           </select>
+          <select id="r-depth" aria-label="Average snow depth" value={minDepth} onChange={(e) => setMinDepth(Number(e.target.value))} style={{ width: 'auto' }}>
+            {DEPTHS.map((d) => <option key={d} value={d}>{d ? `Avg snow depth ${d}+ cm` : 'Any snow depth'}</option>)}
+          </select>
           <Seg label="Sort by" value={sort} onChange={setSort} options={SORTS} />
-          <span className="small muted">{list.length} resorts</span>
+          <span className="small muted">{list.length} resorts{minDepth && snow.data ? ` · ${RESORTS.filter((r) => depthOf(r) == null).length} without snow data are hidden` : ''}</span>
           <button type="button" className="ghost" style={{ marginLeft: 'auto' }} onClick={() => setAdding(!adding)} aria-expanded={adding}>{adding ? 'Close' : 'Add a resort'}</button>
         </div>
         {adding && <AddResortForm initialName={q} onDone={(id) => { setAdding(false); if (id) setQ('') }} />}
       </section>
       {list.length ? (
-        <div className="grid3">{list.map((r) => <ResortCard key={r.id} r={r} days={daysAt.get(r.id) ?? 0} go={go} />)}</div>
+        <div className="grid3">{list.map((r) => <ResortCard key={r.id} r={r} days={daysAt.get(r.id) ?? 0} go={go} snow={snow.data?.[r.id]} />)}</div>
       ) : (
         <div className="empty"><h3>No resort matches</h3><p>Remove a filter, or use Add a resort to add {q ? `“${q}”` : 'a new one'}.</p></div>
       )}
@@ -68,7 +76,7 @@ export default function Resorts({ go }: { go: (h: string) => void }) {
   )
 }
 
-function ResortCard({ r, days, go }: { r: Resort; days: number; go: (h: string) => void }) {
+function ResortCard({ r, days, go, snow: avg }: { r: Resort; days: number; go: (h: string) => void; snow?: SnowSummary[string] }) {
   const [snow, setSnow] = useState(false)
   const vert = r.top - r.base
   const d = dKm(r)
@@ -86,6 +94,12 @@ function ResortCard({ r, days, go }: { r: Resort; days: number; go: (h: string) 
         <div><b>{vert.toLocaleString('en')}</b><span>m vertical</span></div>
         <div><b>{r.top.toLocaleString('en')}</b><span>m top</span></div>
       </div>
+      {avg && (
+        <p className="small">
+          <b className="num">{depthLabel(avg.meanDepth)} cm</b> average snow depth Dec–Mar · <span className="num">{avg.snowfall}</span> cm snowfall a season
+          {avg.meanDepth > GLACIER_CM && <span className="muted"> (glacier model cell)</span>}
+        </p>
+      )}
       <div className="vbar" aria-label={`${r.base} to ${r.top} m`}>
         <div className="track"><div className="fill" style={{ left: `${(r.base / 4000) * 100}%`, width: `${(vert / 4000) * 100}%` }} /></div>
         <span className="small muted num">{r.base}–{r.top} m · {Math.round((vert / maxVert) * 100)}% of the biggest vertical here · {dist != null ? `${dist.toLocaleString('en')} km from Stockholm` : 'position not set'}</span>
