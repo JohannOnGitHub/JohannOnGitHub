@@ -296,3 +296,12 @@ td.num, th.num { text-align: right; }
 .dayk.k-rest { border-left-color: var(--warn); }
 .dayk.k-off { border-left-color: var(--line); opacity: 0.6; }
 .dayk select { width: 100%; }
+
+/* ---------- Shop ---------- */
+.shop-item { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 12px; }
+.tag.purpose { background: transparent; border: 1px solid var(--line); }
+.picks { margin: 0; padding-left: 22px; display: grid; gap: 10px; }
+.picks li { display: grid; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.picks li:last-child { border-bottom: 0; }
+.picks .btn { padding: 4px 10px; font-size: 0.8rem; }
+@media (max-width: 760px) { .tabs a { font-size: 0.62rem; padding: 5px 2px; } }

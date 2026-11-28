@@ -19,8 +19,8 @@ export function coverage(items: GearItem[]) {
 export default function Gear() {
   const all = useStore((s) => s.gear)
   const gear = useMemo(() => live(all), [all])
-  const [tab, setTab] = useState<Discipline | 'shared' | 'missing'>('allmountain')
-  const shown = tab === 'missing' ? gear.filter((g) => g.status === 'missing' || g.status === 'upgrade') : gear.filter((g) => g.discipline === tab)
+  const [tab, setTab] = useState<Discipline | 'shared'>('allmountain')
+  const shown = gear.filter((g) => g.discipline === tab)
 
   return (
     <>
@@ -56,16 +56,17 @@ export default function Gear() {
 
       <section className="panel">
         <div className="between">
-          <Seg label="Show" value={tab} onChange={setTab} options={{ ...DISCIPLINES, missing: 'Shopping list' }} />
+          <Seg label="Show" value={tab} onChange={setTab} options={DISCIPLINES} />
+          <a className="small" href="#shop">Shopping list →</a>
         </div>
         {shown.length ? (
           <div className="list">
-            {shown.map((g) => <GearRow key={g.id} g={g} showDiscipline={tab === 'missing'} />)}
+            {shown.map((g) => <GearRow key={g.id} g={g} showDiscipline={false} />)}
           </div>
         ) : (
-          <div className="empty"><h3>Nothing to buy</h3><p>Items you mark as Missing or Replace show up here.</p></div>
+          <div className="empty"><h3>No items in this list</h3><p>Add one below.</p></div>
         )}
-        {tab !== 'missing' && <AddGear discipline={tab} />}
+        <AddGear discipline={tab} />
       </section>
     </>
   )

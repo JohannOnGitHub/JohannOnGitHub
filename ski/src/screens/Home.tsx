@@ -37,7 +37,7 @@ export default function Home({ go }: { go: (h: string) => void }) {
         <div className="stat"><span className="label">Days this season</span><b className="num">{inSeason.length}</b></div>
         {byType.filter(([, n]) => n).map(([t, n]) => <div className="stat" key={t}><span className="label" style={{ color: TYPE_COLOR[t] }}>{SKI_TYPE[t]}</span><b className="num">{n}</b></div>)}
         <div className="stat"><span className="label">All-time days</span><b className="num">{days.length}</b></div>
-        <div className="stat"><span className="label">To buy</span><b className="num">{shopping}</b></div>
+        <a className="stat" href="#shop" style={{ color: 'inherit', textDecoration: 'none' }}><span className="label">To buy</span><b className="num">{shopping}</b></a>
       </div>
 
       <ProfileCard />

@@ -6,6 +6,7 @@ import Gear from './screens/Gear'
 import Home from './screens/Home'
 import Log from './screens/Log'
 import Resorts from './screens/Resorts'
+import Shop from './screens/Shop'
 import Trips from './screens/Trips'
 
 const TABS = [
@@ -15,6 +16,7 @@ const TABS = [
   { id: 'gear', label: 'Gear', ico: '⛷' },
   { id: 'clothing', label: 'Clothing', ico: '❄' },
   { id: 'resorts', label: 'Resorts', ico: '▲' },
+  { id: 'shop', label: 'Shop', ico: '🛒' },
 ] as const
 
 const readHash = () => location.hash.replace(/^#/, '') || 'home'
@@ -62,6 +64,7 @@ export default function App() {
           : section === 'gear' ? <Gear />
           : section === 'clothing' ? <Clothing />
           : section === 'resorts' ? <Resorts go={go} />
+          : section === 'shop' ? <Shop />
           : <Home go={go} />}
       </main>
       <Toaster />

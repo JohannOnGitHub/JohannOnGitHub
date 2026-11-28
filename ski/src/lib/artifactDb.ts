@@ -35,3 +35,24 @@ export async function readSnapshot<T>(id: string): Promise<T> {
   if (!s.exists || !d?.value) throw new Error('No snapshot yet: ask Claude to refresh conditions')
   return d.value
 }
+
+/** Subscribe to a whole collection written by Claude (e.g. "picks"). Returns an unsubscribe. */
+export function watchCollection<T>(path: string, cb: (rows: (T & { id: string })[] | null, error?: string) => void): () => void {
+  let stop: (() => void) | null = null
+  let cancelled = false
+  void getDb().then((db) => {
+    if (cancelled) return
+    if (!db) {
+      cb(null, 'Open this page on claude.ai to see picks')
+      return
+    }
+    stop = db.collection(path).onSnapshot(
+      (snap) => cb(snap.docs.map((d) => ({ ...(d.data() as T), id: d.id }))),
+      () => cb(null, 'Picks could not be loaded. Reload the page.'),
+    )
+  })
+  return () => {
+    cancelled = true
+    stop?.()
+  }
+}
