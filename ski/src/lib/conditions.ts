@@ -100,12 +100,12 @@ export async function forecast(r: Resort): Promise<Forecast> {
 
 export type Season = {
   label: string; snowfall: number; meanDepth: number; maxDepth: number; daysOver50: number
-  depth: Record<string, number> // "MM-DD" → cm at noon, 1 Nov – 30 Apr
+  depth?: Record<string, number> // "MM-DD" → cm at noon, 1 Nov – 30 Apr
 }
 export type History = { seasons: Season[]; elevation: number; fetchedAt: number }
 
 /** Snow depth on a given day ("MM-DD") in each past season. */
-export const depthOn = (h: History, md: string) => h.seasons.map((s) => ({ label: s.label, cm: s.depth[md] ?? null, snowfall: s.snowfall, meanDepth: s.meanDepth }))
+export const depthOn = (h: History, md: string) => h.seasons.map((s) => ({ label: s.label, cm: s.depth?.[md] ?? (s as { onDates?: number }).onDates ?? null, snowfall: s.snowfall, meanDepth: s.meanDepth }))
 
 /**
  * The last five seasons at the resort's mid-mountain point, from the ERA5 reanalysis.
